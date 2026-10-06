@@ -1,0 +1,90 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "../vendor/shadcn-tailwind-4.13.0.css";
+
+:root {
+  --background: #0b0714;
+  --foreground: #fbf9ff;
+  --card: #171026;
+  --card-foreground: #fbf9ff;
+  --popover: #171026;
+  --popover-foreground: #fbf9ff;
+  --primary: #8b5cf6;
+  --primary-foreground: #ffffff;
+  --secondary: #2a1d40;
+  --secondary-foreground: #f4edff;
+  --muted: #21172f;
+  --muted-foreground: #b9aacd;
+  --accent: #33224c;
+  --accent-foreground: #ffffff;
+  --destructive: #fb7185;
+  --border: #ffffff1f;
+  --input: #ffffff24;
+  --ring: #a78bfa;
+  --chart-1: #a78bfa;
+  --chart-2: #f472b6;
+  --chart-3: #38bdf8;
+  --chart-4: #34d399;
+  --chart-5: #fbbf24;
+  --radius: 0.875rem;
+  --sidebar: #120b20;
+  --sidebar-foreground: #fbf9ff;
+  --sidebar-primary: #8b5cf6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2a1d40;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #ffffff1f;
+  --sidebar-ring: #a78bfa;
+}
+
+@theme inline {
+  --color-background: var(--background); --color-foreground: var(--foreground);
+  --color-card: var(--card); --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover); --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive); --color-border: var(--border);
+  --color-input: var(--input); --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar); --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary); --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent); --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border); --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 4px); --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius); --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* { border-color: var(--border); }
+html { background: var(--background); }
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 15% -10%, rgb(124 58 237 / 24%), transparent 32rem),
+    radial-gradient(circle at 95% 22%, rgb(236 72 153 / 13%), transparent 30rem),
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+button { touch-action: manipulation; }
+.quick-card {
+  display: flex; min-height: 74px; align-items: center; justify-content: center; gap: .55rem;
+  border: 1px solid var(--border); border-radius: 1rem; background: rgb(255 255 255 / 6%);
+  padding: .8rem; color: #f4edff; font-weight: 650; text-align: left;
+  transition: transform .16s ease, background .16s ease;
+}
+.quick-card:hover, .quick-card:focus-visible { background: rgb(139 92 246 / 16%); transform: translateY(-2px); outline: 2px solid transparent; box-shadow: 0 0 0 3px rgb(167 139 250 / 30%); }
+.quick-card.danger { border-color: rgb(251 113 133 / 30%); background: rgb(251 113 133 / 10%); color: #fecdd3; }
+.alert-card { display: flex; gap: 1rem; border: 1px solid var(--border); border-radius: 1.25rem; background: rgb(23 16 38 / 86%); padding: 1rem; box-shadow: 0 18px 45px rgb(0 0 0 / 16%); }
+.alert-icon { display: grid; height: 44px; width: 44px; flex: none; place-items: center; border-radius: .9rem; background: rgb(139 92 246 / 18%); color: #c4b5fd; }
+.alert-card.pink .alert-icon { background: rgb(236 72 153 / 16%); color: #f9a8d4; }
+.alert-card.blue .alert-icon { background: rgb(56 189 248 / 14%); color: #7dd3fc; }
+.category-choice { min-height: 72px; border: 1px solid var(--border); border-radius: 1rem; background: rgb(255 255 255 / 6%); padding: .8rem; font-weight: 700; }
+.category-choice:hover, .category-choice:focus-visible { background: rgb(139 92 246 / 18%); outline: 2px solid #a78bfa; outline-offset: 2px; }
+.category-choice.selected { border-color: #a78bfa; background: rgb(139 92 246 / 28%); box-shadow: inset 0 0 0 1px #a78bfa; }
+.category-choice.urgent { border-color: rgb(251 113 133 / 35%); color: #fecdd3; }
+.alert-card.emergency, .alert-card.medical, .alert-card.security, .alert-card.missing-person { border-color: rgb(251 113 133 / 28%); }
+.alert-card.emergency .alert-icon, .alert-card.medical .alert-icon, .alert-card.security .alert-icon, .alert-card.missing-person .alert-icon { background: rgb(251 113 133 / 14%); color: #fda4af; }
+@media (max-width: 420px) { .quick-card { min-height: 84px; flex-direction: column; text-align: center; font-size: .9rem; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }

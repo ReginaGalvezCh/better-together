@@ -1,0 +1,13 @@
+{
+  "name": "Better Together",
+  "short_name": "Together",
+  "description": "Alertas y apoyo anónimo para cuidarnos en eventos concurridos.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0714",
+  "theme_color": "#8b5cf6",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
+
