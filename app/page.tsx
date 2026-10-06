@@ -127,7 +127,7 @@ export default function Home() {
       const response = await fetch("/api/alerts", { cache: "no-store" });
       if (!response.ok) return;
       const data = (await response.json()) as { alerts: CommunityAlert[] };
-      if (data.alerts.length > 0) setAlerts(data.alerts);
+      setAlerts(data.alerts);
     } catch {
       // Keep the last useful view; connectivity status already explains the state.
     }
@@ -313,6 +313,13 @@ export default function Home() {
         )}
 
         <div className="space-y-3" aria-label="Alertas cercanas">
+          {alerts.length === 0 && (
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-10 text-center">
+              <ShieldCheck className="mx-auto mb-3 text-emerald-300" size={32} />
+              <h2 className="text-lg font-semibold">No hay alertas activas en esta zona</h2>
+              <p className="mt-1 text-muted-foreground">Si necesitas comunicar algo, crea una alerta breve y usa solo una ubicación aproximada.</p>
+            </div>
+          )}
           {alerts.map((alert) => {
             const Icon = icons[alert.category];
             const wasHelped = helped.includes(alert.id);
@@ -417,4 +424,3 @@ export default function Home() {
     </main>
   );
 }
-
