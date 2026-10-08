@@ -13,10 +13,13 @@ Better Together es una PWA móvil para información comprobable y apoyo comunita
 
 El sector de entrada y el sector actual son preferencias distintas. Completar o editar la entrada preselecciona el sector actual; cambiarlo desde Ayuda no cambia la entrada. El plano completo queda dentro de un desplegable para concentrar la vista. No se guardan entradas, QR ni datos de identificación. Si el almacenamiento no está disponible, la elección funciona durante la sesión y se informa que no podrá recordarse.
 
+La barra inferior ofrece tres acciones según el momento elegido manualmente: Antes, Durante o Al salir. Esta preferencia se recuerda por fecha; no pretende confirmar el inicio ni el cierre del evento. Maps recibe solo el recinto público y Uber no recibe coordenadas. Quentro se explica mediante una guía local, sin inventar un enlace a la app. «Estoy a salvo» permite compartir o copiar un mensaje sin ubicación: no publica un reporte ni confirma entrega o atención de seguridad. Los servicios externos pueden requerir conexión aunque la guía local esté disponible.
+
 ## Capas
 
 - `app/page.tsx`: experiencia multidía, secciones, estados de conectividad, caché y cola local.
 - `components/ticket-setup.tsx`: selección inicial de fecha y sector de entrada.
+- `components/quick-access-dock.tsx` y `lib/quick-actions.ts`: acciones por momento, guías locales y enlaces externos sin GPS.
 - `app/api/alerts/route.ts`: validación y acceso seguro a los datos.
 - `lib/events.ts`: sesiones, fases, cuenta regresiva y contenido curado.
 - `lib/alerts.ts`: contrato compartido, categorías habilitadas y límites de entrada.
