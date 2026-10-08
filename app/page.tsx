@@ -279,13 +279,13 @@ export default function Home() {
 
   return (
     <main className="min-h-screen pb-10">
-      <header className="sticky top-0 z-30 border-b border-white/8 bg-[var(--background)]/90 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b bg-[var(--background)]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <span className="brand-mark"><HeartHandshake size={21} aria-hidden="true" /></span>
             <div><p className="brand-kicker">ARMY se cuida</p><p className="font-semibold leading-tight">Better Together</p></div>
           </div>
-          <div className={`flex items-center gap-2 rounded-full border px-3 py-2 text-sm ${online ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100" : "border-amber-300/20 bg-amber-300/10 text-amber-100"}`}>
+          <div className={`connection-pill ${online ? "online" : "offline"}`}>
             {online ? <Wifi size={16} aria-hidden="true" /> : <WifiOff size={16} aria-hidden="true" />}<span>{online ? "En línea" : "Sin señal"}</span>
           </div>
         </div>
@@ -336,7 +336,7 @@ export default function Home() {
             <div className="section-heading"><div><p>Antes de salir</p><h2>Lo esencial para llegar</h2></div><span>Información revisada</span></div>
             {informationItems.slice(0, 2).map((item) => <article className="content-card essential-card" key={item.id}>
               <div className="flex flex-wrap items-start justify-between gap-2"><h3>{item.title}</h3><span className={`status-chip status-${item.status.toLowerCase()}`}>{item.status}</span></div>
-              <p className="mt-2 leading-relaxed text-violet-50/80">{item.value}</p>
+              <p className="mt-2 leading-relaxed text-muted-foreground">{item.value}</p>
               <div className="source-row"><span>{item.scope} · Revisado {item.reviewedAt}</span><a href={item.sourceUrl} target="_blank" rel="noreferrer">{item.sourceLabel}<ExternalLink /></a></div>
             </article>)}
             <details className="more-details">
@@ -344,12 +344,12 @@ export default function Home() {
               <div className="space-y-3 pt-3">
                 {informationItems.slice(2).map((item) => <article className="content-card" key={item.id}>
                   <div className="flex flex-wrap items-start justify-between gap-2"><h3>{item.title}</h3><span className={`status-chip status-${item.status.toLowerCase()}`}>{item.status}</span></div>
-                  <p className="mt-2 leading-relaxed text-violet-50/80">{item.value}</p>
+                  <p className="mt-2 leading-relaxed text-muted-foreground">{item.value}</p>
                   <div className="source-row"><span>{item.scope} · Revisado {item.reviewedAt}</span><a href={item.sourceUrl} target="_blank" rel="noreferrer">{item.sourceLabel}<ExternalLink /></a></div>
                 </article>)}
                 {activities.map((activity) => <article className="content-card" key={activity.id}>
-                  <div className="flex gap-3"><span className="content-icon"><CalendarDays /></span><div><h3>{activity.title}</h3><p className="mt-2 font-medium text-violet-100">{activity.schedule}</p><p className="mt-1 text-violet-50/70">{activity.location}</p></div></div>
-                  <p className="mt-4 leading-relaxed text-violet-50/75">{activity.note}</p><div className="source-row"><span>Revisado {activity.reviewedAt}</span><a href={activity.sourceUrl} target="_blank" rel="noreferrer">{activity.sourceLabel}<ExternalLink /></a></div>
+                  <div className="flex gap-3"><span className="content-icon"><CalendarDays /></span><div><h3>{activity.title}</h3><p className="mt-2 font-medium text-foreground">{activity.schedule}</p><p className="mt-1 text-muted-foreground">{activity.location}</p></div></div>
+                  <p className="mt-4 leading-relaxed text-muted-foreground">{activity.note}</p><div className="source-row"><span>Revisado {activity.reviewedAt}</span><a href={activity.sourceUrl} target="_blank" rel="noreferrer">{activity.sourceLabel}<ExternalLink /></a></div>
                 </article>)}
               </div>
             </details>
@@ -358,8 +358,8 @@ export default function Home() {
           <TabsContent value="pulse" className="space-y-3">
             <div className="section-heading"><div><p>Lo importante ahora</p><h2>Avisos para tu fecha</h2></div><span>Con fuente y fecha</span></div>
             {pulseItems.map((item) => <article className="content-card pulse-card" key={item.id}>
-              <div className="flex items-center justify-between gap-3 text-sm"><span className="font-semibold text-violet-200">{item.source}</span><span className="status-chip">{item.kind}</span></div>
-              <h3 className="mt-3">{item.title}</h3><p className="mt-2 leading-relaxed text-violet-50/75">{item.summary}</p>
+              <div className="flex items-center justify-between gap-3 text-sm"><span className="font-semibold text-primary">{item.source}</span><span className="status-chip">{item.kind}</span></div>
+              <h3 className="mt-3">{item.title}</h3><p className="mt-2 leading-relaxed text-muted-foreground">{item.summary}</p>
               <div className="source-row"><span>{item.publishedLabel}</span><a href={item.url} target="_blank" rel="noreferrer">Abrir fuente<ExternalLink /></a></div>
             </article>)}
           </TabsContent>
@@ -375,12 +375,12 @@ export default function Home() {
               const Icon = alertIcons[alert.category];
               const pending = alert.id.startsWith("pending-");
               return <article className="alert-card" key={alert.id}><div className="alert-icon"><Icon aria-hidden="true" /></div><div className="min-w-0 flex-1">
-                <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold text-violet-200">{categoryLabels[alert.category]}</span><span className="text-sm text-muted-foreground">{relativeTime(alert.createdAt)} · {alert.zone}</span></div>
-                <h3 className="text-lg font-semibold leading-snug">{alert.title}</h3>{alert.details && <p className="mt-1 leading-relaxed text-muted-foreground">{alert.details}</p>}<p className="mt-2 text-sm text-violet-200/70">Alias: {alert.alias}</p>
-                {pending && <span className="mt-3 inline-flex rounded-full bg-amber-300/10 px-2.5 py-1 text-sm text-amber-100">Pendiente de envío en este dispositivo</span>}
+                <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold text-primary">{categoryLabels[alert.category]}</span><span className="text-sm text-muted-foreground">{relativeTime(alert.createdAt)} · {alert.zone}</span></div>
+                <h3 className="text-lg font-semibold leading-snug">{alert.title}</h3>{alert.details && <p className="mt-1 leading-relaxed text-muted-foreground">{alert.details}</p>}<p className="mt-2 text-sm text-primary">Alias: {alert.alias}</p>
+                {pending && <span className="mt-3 inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-sm text-amber-900">Pendiente de envío en este dispositivo</span>}
               </div></article>;
             })}
-            {lastUpdatedAt && <p className="text-center text-sm text-violet-100/50">Última carga: {new Date(lastUpdatedAt).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}</p>}
+            {lastUpdatedAt && <p className="text-center text-sm text-muted-foreground">Última carga: {new Date(lastUpdatedAt).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}</p>}
 
             <Button className="mt-2 h-14 w-full rounded-2xl text-base font-bold" onClick={() => setOpen(true)}><HeartHandshake /> Crear solicitud para {selectedSession.shortDate}</Button>
           </TabsContent>
@@ -388,20 +388,20 @@ export default function Home() {
 
         <Dialog open={open} onOpenChange={setOpen}>
               <DialogContent className="request-dialog max-h-[90vh] overflow-y-auto sm:max-w-lg">
-                <DialogHeader><DialogTitle>Crear solicitud cotidiana</DialogTitle><DialogDescription className="text-violet-200/70">Se publicará solo en {selectedSession.dateLabel}. No compartas nombres reales, teléfonos ni ubicaciones exactas.</DialogDescription></DialogHeader>
+                <DialogHeader><DialogTitle>Crear solicitud cotidiana</DialogTitle><DialogDescription className="text-muted-foreground">Se publicará solo en {selectedSession.dateLabel}. No compartas nombres reales, teléfonos ni ubicaciones exactas.</DialogDescription></DialogHeader>
                 <form className="space-y-4" onSubmit={handleSubmit}>
                   <div><Label className="mb-2">Tipo de solicitud</Label><div className="grid grid-cols-3 gap-2">{enabledAlertCategories.map((category) => <button key={category} className={`category-choice ${selectedCategory === category ? "selected" : ""}`} type="button" onClick={() => setSelectedCategory(category)}>{categoryLabels[category]}</button>)}</div></div>
                   <div className="grid gap-2"><Label htmlFor="alias">Alias anónimo</Label><Input id="alias" name="alias" maxLength={24} placeholder="Ej. PurpleMoon" required autoComplete="off" /></div>
                   <div className="grid gap-2"><Label htmlFor="title">¿Qué necesitas compartir?</Label><Input id="title" name="title" maxLength={80} placeholder="Un mensaje corto y claro" required /></div>
                   <div className="grid gap-2"><Label htmlFor="details">Detalle opcional</Label><Textarea id="details" name="details" maxLength={240} placeholder="Agrega solo lo necesario" rows={3} /></div>
-                  <div className="grid gap-2"><Label htmlFor="zone">Zona aproximada</Label><Select name="zone" defaultValue={zones[0]}><SelectTrigger id="zone" className="h-11 w-full bg-white/5"><SelectValue /></SelectTrigger><SelectContent>{zones.map((zone) => <SelectItem key={zone} value={zone}>{zone}</SelectItem>)}</SelectContent></Select></div>
+                  <div className="grid gap-2"><Label htmlFor="zone">Zona aproximada</Label><Select name="zone" defaultValue={zones[0]}><SelectTrigger id="zone" className="h-11 w-full"><SelectValue /></SelectTrigger><SelectContent>{zones.map((zone) => <SelectItem key={zone} value={zone}>{zone}</SelectItem>)}</SelectContent></Select></div>
                   <input className="hidden" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
                   <Button className="h-12 w-full text-base font-bold" type="submit" disabled={submitting}>{submitting ? "Guardando…" : online ? "Publicar por 2 horas" : "Guardar para intentar después"}</Button>
                 </form>
               </DialogContent>
         </Dialog>
 
-        <div className="mt-5 flex gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-muted-foreground"><Info className="shrink-0 text-violet-300" size={19} aria-hidden="true" /><p>Better Together reúne orientación comunitaria; no reemplaza al organizador, al personal del recinto ni a los servicios de emergencia.</p></div>
+        <div className="app-note mt-5"><Info className="shrink-0 text-primary" size={19} aria-hidden="true" /><p>Better Together reúne orientación comunitaria; no reemplaza al organizador, al personal del recinto ni a los servicios de emergencia.</p></div>
       </section>
     </main>
   );
