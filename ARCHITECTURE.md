@@ -4,16 +4,19 @@ Better Together es una PWA móvil para información comprobable y apoyo comunita
 
 ## Flujo principal
 
-1. La persona elige una de las tres sesiones sin alterar la fase de las demás.
+1. Al entrar por primera vez, la persona elige fecha y sector de su entrada en dos pasos. La elección se guarda en el dispositivo y se puede editar con «Cambiar mi entrada».
 2. Consulta información práctica, Pulse y actividades con fuente y fecha de revisión.
 3. Si usa Ayuda, solo ve y crea solicitudes cotidianas de la sesión seleccionada.
 4. Puede seleccionar manualmente un sector amplio en el mapa esquemático para filtrar avisos; la preferencia se guarda solo en ese dispositivo.
 5. Si no hay señal, la solicitud queda temporalmente en el dispositivo y se sincroniza con el mismo identificador al volver la conexión.
 6. Las solicitudes caducan dos horas después de su creación original, aunque hayan esperado en la cola.
 
+El sector de entrada y el sector actual son preferencias distintas. Completar o editar la entrada preselecciona el sector actual; cambiarlo desde Ayuda no cambia la entrada. El plano completo queda dentro de un desplegable para concentrar la vista. No se guardan entradas, QR ni datos de identificación. Si el almacenamiento no está disponible, la elección funciona durante la sesión y se informa que no podrá recordarse.
+
 ## Capas
 
 - `app/page.tsx`: experiencia multidía, secciones, estados de conectividad, caché y cola local.
+- `components/ticket-setup.tsx`: selección inicial de fecha y sector de entrada.
 - `app/api/alerts/route.ts`: validación y acceso seguro a los datos.
 - `lib/events.ts`: sesiones, fases, cuenta regresiva y contenido curado.
 - `lib/alerts.ts`: contrato compartido, categorías habilitadas y límites de entrada.

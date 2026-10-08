@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, Cloud, CloudFog, CloudLightning, CloudRain, CloudSun, Clock3, Droplets, ExternalLink, HeartHandshake, Info, Map as MapIcon, MapPin, Moon, Newspaper, RefreshCw, ShieldCheck, Snowflake, Sparkles, Sun, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { TicketSetup, type TicketPreference } from "@/components/ticket-setup";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,7 @@ import { forecastForDate, weatherApiUrl, type WeatherForecast, type WeatherKind,
 const alertIcons = { "safe-point": MapPin, supplies: HeartHandshake, information: Sparkles };
 const pendingKey = "better-together:pending-alerts:v2";
 const selectedZoneKey = "better-together:selected-zone:v1";
+const ticketKey = "better-together:ticket:v1";
 const cacheKey = (sessionId: EventSessionId) => `better-together:alerts:${sessionId}`;
 type FeedState = "loading" | "ready" | "cached" | "error";
 type CachedFeed = { alerts: CommunityAlert[]; fetchedAt: string };
@@ -73,6 +75,10 @@ export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
   const [requestZone, setRequestZone] = useState<Zone>(sectors[0].id);
+  const [ticket, setTicket] = useState<TicketPreference | null>(null);
+  const [ticketReady, setTicketReady] = useState(false);
+  const [editingTicket, setEditingTicket] = useState(false);
+  const feedRequestVersion = useRef(0);
 
   const selectedSession = useMemo(() => eventSessions.find((session) => session.id === selectedSessionId) ?? eventSessions[0], [selectedSessionId]);
   const phase = getSessionPhase(selectedSession, now);
@@ -88,6 +94,7 @@ export default function Home() {
   }, []);
 
   const loadAlerts = useCallback(async (sessionId: EventSessionId, silent = false) => {
+    const version = ++feedRequestVersion.current;
     const cached = readCached(sessionId);
     if (!silent) {
       if (cached) {
@@ -104,12 +111,13 @@ export default function Home() {
       const response = await fetch(`/api/alerts?session=${encodeURIComponent(sessionId)}`, { cache: "no-store" });
       if (!response.ok) throw new Error("load_failed");
       const data = (await response.json()) as { alerts: CommunityAlert[] };
+      if (version !== feedRequestVersion.current) return;
       const fetchedAt = new Date().toISOString();
       setAlerts(data.alerts);
       setLastUpdatedAt(fetchedAt);
       setFeedState("ready");
       saveCached(sessionId, data.alerts);
-    } catch { setFeedState(cached ? "cached" : "error"); }
+    } catch { if (version === feedRequestVersion.current) setFeedState(cached ? "cached" : "error"); }
   }, []);
 
   const syncPending = useCallback(async () => {
@@ -144,11 +152,18 @@ export default function Home() {
 
   useEffect(() => {
     const restoreZone = window.setTimeout(() => {
-      const savedZone = localStorage.getItem(selectedZoneKey);
-      if (isZone(savedZone)) {
-        setSelectedZone(savedZone);
-        setRequestZone(savedZone);
-      }
+      try {
+        const saved = JSON.parse(localStorage.getItem(ticketKey) || "null") as TicketPreference | null;
+        if (saved && eventSessions.some((session) => session.id === saved.sessionId) && isZone(saved.zone)) {
+          setTicket(saved);
+          setSelectedSessionId(saved.sessionId);
+          const savedZone = localStorage.getItem(selectedZoneKey);
+          const currentZone = isZone(savedZone) ? savedZone : savedZone === "all" ? null : saved.zone;
+          setSelectedZone(currentZone);
+          setRequestZone(currentZone ?? saved.zone);
+        }
+      } catch { /* Invalid or unavailable storage leaves setup available. */ }
+      setTicketReady(true);
     }, 0);
     return () => window.clearTimeout(restoreZone);
   }, []);
@@ -180,6 +195,7 @@ export default function Home() {
     const initialLoad = window.setTimeout(() => void loadAlerts(selectedSessionId), 0);
     const interval = window.setInterval(() => void loadAlerts(selectedSessionId, true), 15_000);
     return () => {
+      feedRequestVersion.current += 1;
       window.clearTimeout(initialLoad);
       window.clearInterval(interval);
     };
@@ -308,10 +324,28 @@ export default function Home() {
     setSelectedZone(zone);
     if (zone) {
       setRequestZone(zone);
-      localStorage.setItem(selectedZoneKey, zone);
-    } else {
-      localStorage.removeItem(selectedZoneKey);
     }
+    try { localStorage.setItem(selectedZoneKey, zone ?? "all"); }
+    catch { /* Filtering still works when storage is unavailable. */ }
+  }
+
+  function completeTicket(preference: TicketPreference) {
+    if (preference.sessionId !== selectedSessionId) {
+      feedRequestVersion.current += 1;
+      setAlerts([]);
+      setLastUpdatedAt(null);
+      setFeedState("loading");
+    }
+    setTicket(preference);
+    setSelectedSessionId(preference.sessionId);
+    setSelectedZone(preference.zone);
+    setRequestZone(preference.zone);
+    setEditingTicket(false);
+    setActiveSection("home");
+    try {
+      localStorage.setItem(ticketKey, JSON.stringify(preference));
+      localStorage.setItem(selectedZoneKey, preference.zone);
+    } catch { toast.info("Tu elección está lista. Este navegador no permite recordarla al cerrar."); }
   }
 
   function toggleTheme() {
@@ -341,12 +375,11 @@ export default function Home() {
       </header>
 
       <section className="mx-auto max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
+        {!ticketReady ? <p className="py-8 text-center text-muted-foreground" role="status">Preparando tu concierto…</p> : !ticket || editingTicket ? <TicketSetup initial={ticket} onComplete={completeTicket} onCancel={ticket ? () => setEditingTicket(false) : undefined} /> : <>
         <div className="mb-4"><p className="eyebrow mb-1">BTS WORLD TOUR ARIRANG · Santiago</p><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Tu concierto, a mano</h1></div>
-        <div className="session-strip mb-4" aria-label="Sesiones del concierto">
-          {eventSessions.map((session) => {
-            const selected = session.id === selectedSessionId;
-            return <button key={session.id} className={`session-button ${selected ? "selected" : ""}`} type="button" aria-pressed={selected} onClick={() => setSelectedSessionId(session.id)}><span>{session.shortDate}</span><small>20:00 aprox.</small></button>;
-          })}
+        <div className="ticket-summary mb-4">
+          <div><p className="eyebrow">Mi entrada · {selectedSession.shortDate}</p><strong>{ticket.zone}</strong></div>
+          <button type="button" onClick={() => setEditingTicket(true)}>Cambiar mi entrada</button>
         </div>
 
         <div className="event-moment mb-5">
@@ -415,6 +448,8 @@ export default function Home() {
 
           <TabsContent value="help" className="space-y-3">
             <div className="section-heading"><div><p>Ayuda cotidiana · En prueba</p><h2>Solicitudes de {selectedSession.shortDate}</h2></div><span>{visibleAlerts.length} visibles</span></div>
+            <div className="current-sector"><div><p className="eyebrow">Avisos de tu sector</p><strong>{selectedZone ?? "Todos los sectores"}</strong><p>Puedes cambiarlo si te mueves dentro del recinto.</p></div></div>
+            <details className="more-details"><summary>Cambiar sector o ver el plano</summary><div className="pt-3">
             <section className="sector-panel" aria-labelledby="sector-map-title">
               <div className="sector-panel-heading">
                 <span className="sector-heading-icon"><MapIcon aria-hidden="true" /></span>
@@ -437,6 +472,7 @@ export default function Home() {
               </div>
               <div className="sector-reference"><p>Esquema referencial · Cancha Andes y Pacífico comparten la cancha 360°. Ingresa por el sector de tu entrada. Los puntos de encuentro se acuerdan por separado.</p><a href={sectorSource} target="_blank" rel="noreferrer">Ver plano en Ticketmaster <ExternalLink size={13} aria-hidden="true" /></a></div>
             </section>
+            </div></details>
             <div className="safety-note"><ShieldCheck aria-hidden="true" /><p><strong>Solo necesidades cotidianas.</strong> Para una urgencia, una persona perdida, riesgo médico o de seguridad, acude al personal del recinto o a los canales oficiales.</p></div>
             {!online && <div className="offline-note"><WifiOff aria-hidden="true" /><p>{feedState === "cached" ? "Ves contenido guardado en este dispositivo. Puede estar desactualizado." : "Sin una carga anterior no podemos mostrar solicitudes. Puedes guardar una nueva para intentar enviarla al recuperar señal."}</p></div>}
             {feedState === "loading" && <div className="empty-state"><RefreshCw className="animate-spin" /><h3>Cargando solicitudes</h3><p>Consultando esta sesión.</p></div>}
@@ -471,6 +507,7 @@ export default function Home() {
                 </form>
               </DialogContent>
         </Dialog>
+        </>}
 
         <div className="app-note mt-5"><Info className="shrink-0 text-primary" size={19} aria-hidden="true" /><p>Better Together reúne orientación comunitaria; no reemplaza al organizador, al personal del recinto ni a los servicios de emergencia.</p></div>
         <footer className="site-footer">
