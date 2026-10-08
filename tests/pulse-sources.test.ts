@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { tikTokPostSeeds, tikTokSourceCandidates } from "../lib/pulse-sources.ts";
 
-test("preserves ten source names and keeps similarly named BTS accounts separate", () => {
-  assert.deepEqual(tikTokSourceCandidates.map((source) => source.suppliedName), ["karen voncita", "mary prado", "camkal", "cachaestaarmy", "bts.chileprojects", "catalipedema", "ladanipo_", "cataschulbe", "catahrsc", "bts.chileofficial"]);
-  assert.equal(new Set(tikTokSourceCandidates.map((source) => source.id)).size, 10);
+test("preserves eleven source names and keeps similarly named BTS accounts separate", () => {
+  assert.deepEqual(tikTokSourceCandidates.map((source) => source.suppliedName), ["karen voncita", "mary prado", "camkal", "cachaestaarmy", "bts.chileprojects", "catalipedema", "ladanipo_", "cataschulbe", "catahrsc", "bts.chileofficial", "franchekal"]);
+  assert.equal(new Set(tikTokSourceCandidates.map((source) => source.id)).size, 11);
 });
 test("unverified community candidates cannot imply active monitoring or official status", () => {
   for (const source of tikTokSourceCandidates) {
@@ -16,7 +16,7 @@ test("unverified community candidates cannot imply active monitoring or official
 
 test("only explicitly supplied profiles are associated, without tracking parameters", () => {
   const linked = tikTokSourceCandidates.filter((source) => source.verification === "user-provided");
-  assert.deepEqual(linked.map((source) => source.id), ["catalipedema", "cataschulbe", "catahrsc", "bts-chileofficial"]);
+  assert.deepEqual(linked.map((source) => source.id), ["catalipedema", "cataschulbe", "catahrsc", "bts-chileofficial", "franchekal"]);
   for (const source of linked) {
     const url = new URL(source.profileUrl!);
     assert.equal(url.origin, "https://www.tiktok.com");

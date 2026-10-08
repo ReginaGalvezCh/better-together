@@ -20,6 +20,7 @@ export const tikTokSourceCandidates: readonly TikTokSourceCandidate[] = [
   { id: "cataschulbe", suppliedName: "cataschulbe", platform: "tiktok", origin: "community", verification: "user-provided", profileUrl: "https://www.tiktok.com/@cataschulbe", monitoringEnabled: false },
   { id: "catahrsc", suppliedName: "catahrsc", platform: "tiktok", origin: "community", verification: "user-provided", profileUrl: "https://www.tiktok.com/@catahrsc", monitoringEnabled: false },
   { id: "bts-chileofficial", suppliedName: "bts.chileofficial", platform: "tiktok", origin: "community", verification: "user-provided", profileUrl: "https://www.tiktok.com/@bts.chileofficial", monitoringEnabled: false },
+  { id: "franchekal", suppliedName: "franchekal", platform: "tiktok", origin: "community", verification: "user-provided", profileUrl: "https://www.tiktok.com/@franchekal", monitoringEnabled: false },
 ];
 
 // Public redirects establish URLs only, not identity, relevance or video contents.
