@@ -17,9 +17,12 @@ La barra inferior conserva el selector Antes, Durante o Al salir sobre sus tres 
 
 ## Capas
 
+Pulso ARMY reemplaza la lista vertical de Avisos con hasta tres temas editoriales por fecha y origen. Tiene tarjetas horizontales con swipe nativo y flechas explícitas, sin avance automático ni scroll infinito. La fecha/hora identifica la revisión editorial, no la publicación original ni una consulta en vivo. La selección inicial se revisó en fuentes oficiales de Ticketmaster; Comunidad muestra un estado vacío hasta incorporar publicaciones reales. No hay scraping, agente programado, métricas de popularidad, GPS ni índice de seguridad. Contenido incluido con la app; offline requiere cargarla previamente y los enlaces externos pueden no funcionar.
+
 - `app/page.tsx`: experiencia multidía, secciones, estados de conectividad, caché y cola local.
 - `components/ticket-setup.tsx`: selección inicial de fecha y sector de entrada.
 - `components/quick-access-dock.tsx` y `lib/quick-actions.ts`: acciones por momento, guías locales y enlaces externos sin GPS.
+- `components/army-pulse.tsx` y `lib/army-pulse.ts`: carrusel editorial, fuentes y separación entre oficial/comunidad.
 - `app/api/alerts/route.ts`: validación y acceso seguro a los datos.
 - `lib/events.ts`: sesiones, fases, cuenta regresiva y contenido curado.
 - `lib/alerts.ts`: contrato compartido, categorías habilitadas y límites de entrada.

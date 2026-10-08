@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TicketSetup, type TicketPreference } from "@/components/ticket-setup";
 import { QuickAccessDock } from "@/components/quick-access-dock";
+import { ArmyPulse } from "@/components/army-pulse";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { categoryLabels, enabledAlertCategories, type AlertInput, type CommunityAlert } from "@/lib/alerts";
-import { activities, eventSessions, getCountdownParts, getDefaultSession, getSessionPhase, informationItems, pulseItems, type EventSessionId } from "@/lib/events";
+import { activities, eventSessions, getCountdownParts, getDefaultSession, getSessionPhase, informationItems, type EventSessionId } from "@/lib/events";
 import { filterByZone, isZone, sectors, sectorSource, type Zone } from "@/lib/sectors";
 import { forecastForDate, weatherApiUrl, type WeatherForecast, type WeatherKind, type WeatherResponse } from "@/lib/weather";
 
@@ -401,10 +402,11 @@ export default function Home() {
 
         <Tabs value={activeSection} onValueChange={setActiveSection}>
           <TabsList className="section-tabs mb-5 h-auto w-full" aria-label="Secciones del evento">
-            <TabsTrigger value="home"><Info /> Inicio</TabsTrigger><TabsTrigger value="pulse"><Newspaper /> Avisos</TabsTrigger><TabsTrigger value="help"><HeartHandshake /> Ayuda</TabsTrigger>
+            <TabsTrigger value="home"><Info /> Inicio</TabsTrigger><TabsTrigger value="pulse"><Newspaper /> Pulso</TabsTrigger><TabsTrigger value="help"><HeartHandshake /> Ayuda</TabsTrigger>
           </TabsList>
 
           <TabsContent value="home" className="space-y-3">
+            <button type="button" className="pulse-shortcut" onClick={() => setActiveSection("pulse")}><Newspaper aria-hidden="true" /><span><strong>Pulso ARMY</strong><small>Tres temas para tu concierto · Ver novedades</small></span><span aria-hidden="true">→</span></button>
             <div className="community-status">
               <span className={`signal-dot ${online ? "online" : "offline"}`} aria-hidden="true" />
               <div><p className="eyebrow">Comunidad · {selectedSession.shortDate}</p><h2>{feedState === "loading" ? "Buscando actividad reciente" : visibleAlerts.length ? `${visibleAlerts.length} solicitud${visibleAlerts.length === 1 ? "" : "es"} ${selectedZone ? `en ${selectedZone}` : "activa" + (visibleAlerts.length === 1 ? "" : "s")}` : selectedZone ? `Sin solicitudes en ${selectedZone}` : "Todo tranquilo por ahora"}</h2></div>
@@ -433,12 +435,7 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="pulse" className="space-y-3">
-            <div className="section-heading"><div><p>Lo importante ahora</p><h2>Avisos para tu fecha</h2></div><span>Con fuente y fecha</span></div>
-            {pulseItems.map((item) => <article className="content-card pulse-card" key={item.id}>
-              <div className="flex items-center justify-between gap-3 text-sm"><span className="font-semibold text-primary">{item.source}</span><span className="status-chip">{item.kind}</span></div>
-              <h3 className="mt-3">{item.title}</h3><p className="mt-2 leading-relaxed text-muted-foreground">{item.summary}</p>
-              <div className="source-row"><span>{item.publishedLabel}</span><a href={item.url} target="_blank" rel="noreferrer">Abrir fuente<ExternalLink /></a></div>
-            </article>)}
+            <ArmyPulse key={selectedSessionId} sessionId={selectedSessionId} dateLabel={selectedSession.shortDate} online={online} />
           </TabsContent>
 
           <TabsContent value="help" className="space-y-3">
