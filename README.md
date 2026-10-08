@@ -8,6 +8,7 @@ Experiencia móvil para orientar y acompañar a fans durante las tres sesiones d
 - Fases y cuenta regresiva que identifican la hora como estimada.
 - Información práctica, Pulse y actividades con fuente y fecha de revisión.
 - Solicitudes cotidianas aisladas por sesión, con zonas aproximadas.
+- Mapa esquemático sin GPS para elegir un sector y priorizar avisos cercanos.
 - Cola local idempotente cuando no hay señal y descarte de solicitudes vencidas.
 - Estados distintos para carga, vacío, error y contenido guardado.
 - Métricas agregadas sin perfiles personales.
@@ -28,7 +29,7 @@ Para la base local, genera primero el build y aplica las migraciones indicadas e
 
 ## Flujo de trabajo
 
-El desarrollo se realiza en ramas cortas desde `main`. Esta iteración usa `feat/multiday-experience`; antes de integrar debe pasar build, pruebas y revisión móvil. La publicación y los permisos del Site se gestionan por separado.
+El desarrollo se realiza en ramas cortas. Esta iteración usa `feat/sector-alerts`, creada sobre la capa visual vigente; antes de integrar debe pasar build, pruebas y revisión móvil. La publicación y los permisos del Site se gestionan por separado.
 
 ## Documentación
 
