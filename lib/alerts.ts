@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { eventSessionIds } from "@/lib/events";
 
 export const alertCategories = [
   "emergency",
@@ -29,9 +30,14 @@ export const categoryLabels: Record<(typeof alertCategories)[number], string> = 
   information: "Aviso útil",
 };
 
+export const enabledAlertCategories = ["safe-point", "supplies", "information"] as const;
+
 export const alertInputSchema = z.object({
+  sessionId: z.enum(eventSessionIds),
+  clientRequestId: z.string().uuid(),
+  createdAt: z.string().datetime(),
   alias: z.string().trim().min(2).max(24),
-  category: z.enum(alertCategories),
+  category: z.enum(enabledAlertCategories),
   title: z.string().trim().min(4).max(80),
   details: z.string().trim().max(240).default(""),
   zone: z.enum(zones),
@@ -44,7 +50,5 @@ export type AlertInput = z.infer<typeof alertInputSchema>;
 export type CommunityAlert = Omit<AlertInput, "website"> & {
   id: string;
   status: "active" | "resolved";
-  createdAt: string;
   expiresAt: string;
 };
-

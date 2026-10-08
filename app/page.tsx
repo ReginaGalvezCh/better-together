@@ -1,98 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  BellRing,
-  CircleCheck,
-  HeartHandshake,
-  Info,
-  MapPin,
-  ShieldAlert,
-  ShieldCheck,
-  Sparkles,
-  Stethoscope,
-  UserRoundSearch,
-  Wifi,
-  WifiOff,
-} from "lucide-react";
+import { CalendarDays, Clock3, ExternalLink, HeartHandshake, Info, MapPin, Newspaper, RefreshCw, ShieldCheck, Sparkles, TicketCheck, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  alertCategories,
-  categoryLabels,
-  type AlertInput,
-  type CommunityAlert,
-  zones,
-} from "@/lib/alerts";
+import { categoryLabels, enabledAlertCategories, type AlertInput, type CommunityAlert, zones } from "@/lib/alerts";
+import { activities, eventSessions, getCountdownParts, getDefaultSession, getSessionPhase, informationItems, pulseItems, type EventSessionId } from "@/lib/events";
 
-const demos: CommunityAlert[] = [
-  {
-    id: "demo-safe",
-    alias: "PurpleMoon",
-    category: "safe-point",
-    title: "Punto seguro: acceso norte",
-    details: "Nos reunimos junto al letrero morado, sin bloquear el paso.",
-    zone: "Acceso Norte",
-    connectivity: "online",
-    status: "active",
-    createdAt: new Date(Date.now() - 3 * 60_000).toISOString(),
-    expiresAt: new Date(Date.now() + 90 * 60_000).toISOString(),
-  },
-  {
-    id: "demo-help",
-    alias: "Borahae",
-    category: "supplies",
-    title: "¿Alguien tiene una toalla higiénica?",
-    details: "Estoy cerca del baño del nivel 1. Puedo esperar aquí.",
-    zone: "Nivel 1",
-    connectivity: "online",
-    status: "active",
-    createdAt: new Date(Date.now() - 7 * 60_000).toISOString(),
-    expiresAt: new Date(Date.now() + 80 * 60_000).toISOString(),
-  },
-  {
-    id: "demo-info",
-    alias: "Mikrokosmos",
-    category: "information",
-    title: "Baños disponibles sin fila",
-    details: "Los del acceso oriente están abiertos y con poca espera.",
-    zone: "Acceso Oriente",
-    connectivity: "online",
-    status: "active",
-    createdAt: new Date(Date.now() - 11 * 60_000).toISOString(),
-    expiresAt: new Date(Date.now() + 70 * 60_000).toISOString(),
-  },
-];
+const alertIcons = { "safe-point": MapPin, supplies: HeartHandshake, information: Sparkles };
+const pendingKey = "better-together:pending-alerts:v2";
+const cacheKey = (sessionId: EventSessionId) => `better-together:alerts:${sessionId}`;
+type FeedState = "loading" | "ready" | "cached" | "error";
+type CachedFeed = { alerts: CommunityAlert[]; fetchedAt: string };
 
-const icons = {
-  emergency: BellRing,
-  "missing-person": UserRoundSearch,
-  medical: Stethoscope,
-  security: ShieldAlert,
-  "safe-point": MapPin,
-  supplies: HeartHandshake,
-  information: Sparkles,
-};
-
-const pendingKey = "better-together:pending-alerts";
+class PublishError extends Error {
+  constructor(public status: number) { super("publish_failed"); }
+}
 
 function relativeTime(value: string) {
   const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60_000));
@@ -102,45 +31,63 @@ function relativeTime(value: string) {
 }
 
 function readPending(): AlertInput[] {
-  try {
-    return JSON.parse(localStorage.getItem(pendingKey) || "[]") as AlertInput[];
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(localStorage.getItem(pendingKey) || "[]") as AlertInput[]; }
+  catch { return []; }
 }
-
-function savePending(items: AlertInput[]) {
-  localStorage.setItem(pendingKey, JSON.stringify(items));
+function savePending(items: AlertInput[]) { localStorage.setItem(pendingKey, JSON.stringify(items)); }
+function readCached(sessionId: EventSessionId): CachedFeed | null {
+  try { return JSON.parse(localStorage.getItem(cacheKey(sessionId)) || "null") as CachedFeed | null; }
+  catch { return null; }
+}
+function saveCached(sessionId: EventSessionId, alerts: CommunityAlert[]) {
+  localStorage.setItem(cacheKey(sessionId), JSON.stringify({ alerts, fetchedAt: new Date().toISOString() }));
 }
 
 export default function Home() {
-  const [alerts, setAlerts] = useState<CommunityAlert[]>(demos);
+  const [selectedSessionId, setSelectedSessionId] = useState<EventSessionId>(() => getDefaultSession().id);
+  const [activeSection, setActiveSection] = useState("info");
+  const [now, setNow] = useState(() => new Date());
+  const [alerts, setAlerts] = useState<CommunityAlert[]>([]);
+  const [feedState, setFeedState] = useState<FeedState>("loading");
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [online, setOnline] = useState(true);
   const [open, setOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<AlertInput["category"]>("safe-point");
   const [submitting, setSubmitting] = useState(false);
-  const [helped, setHelped] = useState<string[]>([]);
 
-  const loadAlerts = useCallback(async () => {
-    if (!navigator.onLine) return;
-    try {
-      const response = await fetch("/api/alerts", { cache: "no-store" });
-      if (!response.ok) return;
-      const data = (await response.json()) as { alerts: CommunityAlert[] };
-      setAlerts(data.alerts);
-    } catch {
-      // Keep the last useful view; connectivity status already explains the state.
-    }
-  }, []);
+  const selectedSession = useMemo(() => eventSessions.find((session) => session.id === selectedSessionId) ?? eventSessions[0], [selectedSessionId]);
+  const phase = getSessionPhase(selectedSession, now);
+  const countdown = getCountdownParts(selectedSession, now);
 
   const publish = useCallback(async (input: AlertInput) => {
-    const response = await fetch("/api/alerts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    });
-    if (!response.ok) throw new Error("publish_failed");
+    const response = await fetch("/api/alerts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
+    if (!response.ok) throw new PublishError(response.status);
     return ((await response.json()) as { alert: CommunityAlert }).alert;
+  }, []);
+
+  const loadAlerts = useCallback(async (sessionId: EventSessionId, silent = false) => {
+    const cached = readCached(sessionId);
+    if (!silent) {
+      if (cached) {
+        setAlerts(cached.alerts.filter((alert) => new Date(alert.expiresAt).getTime() > Date.now()));
+        setLastUpdatedAt(cached.fetchedAt);
+        setFeedState("cached");
+      } else {
+        setAlerts([]);
+        setFeedState(navigator.onLine ? "loading" : "error");
+      }
+    }
+    if (!navigator.onLine) return;
+    try {
+      const response = await fetch(`/api/alerts?session=${encodeURIComponent(sessionId)}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("load_failed");
+      const data = (await response.json()) as { alerts: CommunityAlert[] };
+      const fetchedAt = new Date().toISOString();
+      setAlerts(data.alerts);
+      setLastUpdatedAt(fetchedAt);
+      setFeedState("ready");
+      saveCached(sessionId, data.alerts);
+    } catch { setFeedState(cached ? "cached" : "error"); }
   }, []);
 
   const syncPending = useCallback(async () => {
@@ -148,79 +95,89 @@ export default function Home() {
     if (!pending.length || !navigator.onLine) return;
     const remaining: AlertInput[] = [];
     let synced = 0;
+    let expired = 0;
     for (const item of pending) {
       try {
         const alert = await publish({ ...item, connectivity: "queued" });
-        setAlerts((current) => [alert, ...current.filter((entry) => entry.id !== alert.id)]);
+        if (alert.sessionId === selectedSessionId) setAlerts((current) => [alert, ...current.filter((entry) => entry.id !== alert.id)]);
         synced += 1;
-      } catch {
-        remaining.push(item);
+      } catch (error) {
+        if (error instanceof PublishError && error.status >= 400 && error.status < 500) expired += 1;
+        else remaining.push(item);
       }
     }
     savePending(remaining);
-    if (synced) toast.success(`${synced} alerta${synced > 1 ? "s" : ""} sincronizada${synced > 1 ? "s" : ""}`);
-  }, [publish]);
+    if (synced) toast.success(`${synced} solicitud${synced > 1 ? "es" : ""} sincronizada${synced > 1 ? "s" : ""}`);
+    if (expired) toast.info(`${expired} solicitud${expired > 1 ? "es" : ""} guardada${expired > 1 ? "s" : ""} ya había${expired > 1 ? "n" : ""} vencido`);
+  }, [publish, selectedSessionId]);
 
   useEffect(() => {
-    const updateStatus = () => {
-      setOnline(navigator.onLine);
-      if (navigator.onLine) void syncPending();
+    const initialLoad = window.setTimeout(() => void loadAlerts(selectedSessionId), 0);
+    const interval = window.setInterval(() => void loadAlerts(selectedSessionId, true), 15_000);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(interval);
     };
-    setOnline(navigator.onLine);
+  }, [loadAlerts, selectedSessionId]);
+
+  useEffect(() => {
+    const updateStatus = () => { setOnline(navigator.onLine); if (navigator.onLine) void syncPending(); };
+    const updateTime = () => setNow(new Date());
+    const initialStatus = window.setTimeout(updateStatus, 0);
     window.addEventListener("online", updateStatus);
     window.addEventListener("offline", updateStatus);
-    void loadAlerts();
-    const interval = window.setInterval(loadAlerts, 15_000);
+    document.addEventListener("visibilitychange", updateTime);
+    const interval = window.setInterval(updateTime, 60_000);
     return () => {
       window.removeEventListener("online", updateStatus);
       window.removeEventListener("offline", updateStatus);
+      document.removeEventListener("visibilitychange", updateTime);
+      window.clearTimeout(initialStatus);
       window.clearInterval(interval);
     };
-  }, [loadAlerts, syncPending]);
+  }, [syncPending]);
 
   useEffect(() => {
     const context = document.modelContext;
     if (!context?.registerTool) return;
     const lifecycle = new AbortController();
-    void Promise.resolve(
-      context.registerTool(
-        {
-          name: "create_community_alert",
-          title: "Crear alerta comunitaria",
-          description: "Publica una alerta anónima en Better Together usando una zona aproximada.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              alias: { type: "string", minLength: 2, maxLength: 24 },
-              category: { type: "string", enum: alertCategories },
-              title: { type: "string", minLength: 4, maxLength: 80 },
-              details: { type: "string", maxLength: 240 },
-              zone: { type: "string", enum: zones },
-            },
-            required: ["alias", "category", "title", "zone"],
-            additionalProperties: false,
-          },
-          annotations: { readOnlyHint: false, untrustedContentHint: false },
-          async execute(input: unknown) {
-            const value = input as AlertInput;
-            const alert = await publish({ ...value, details: value.details || "", connectivity: "online" });
-            setAlerts((current) => [alert, ...current]);
-            return { id: alert.id, status: alert.status, zone: alert.zone };
-          },
+    void Promise.resolve(context.registerTool({
+      name: "create_community_request",
+      title: "Crear solicitud comunitaria",
+      description: "Publica una solicitud cotidiana y anónima para una sesión de Better Together.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          alias: { type: "string", minLength: 2, maxLength: 24 },
+          category: { type: "string", enum: enabledAlertCategories },
+          title: { type: "string", minLength: 4, maxLength: 80 },
+          details: { type: "string", maxLength: 240 },
+          zone: { type: "string", enum: zones },
+          sessionId: { type: "string", enum: eventSessions.map((session) => session.id) },
         },
-        { signal: lifecycle.signal }
-      )
-    ).catch(() => undefined);
+        required: ["alias", "category", "title", "zone", "sessionId"],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false },
+      async execute(input: unknown) {
+        const value = input as Omit<AlertInput, "clientRequestId" | "createdAt" | "connectivity">;
+        const alert = await publish({ ...value, details: value.details || "", clientRequestId: crypto.randomUUID(), createdAt: new Date().toISOString(), connectivity: "online" });
+        if (alert.sessionId === selectedSessionId) setAlerts((current) => [alert, ...current]);
+        return { id: alert.id, status: alert.status, zone: alert.zone, sessionId: alert.sessionId };
+      },
+    }, { signal: lifecycle.signal })).catch(() => undefined);
     return () => lifecycle.abort();
-  }, [publish]);
-
-  const activeCount = useMemo(() => alerts.filter((item) => item.status === "active").length, [alerts]);
+  }, [publish, selectedSessionId]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setSubmitting(true);
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     const input: AlertInput = {
+      sessionId: selectedSessionId,
+      clientRequestId: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
       alias: String(form.get("alias") || "").trim(),
       category: selectedCategory,
       title: String(form.get("title") || "").trim(),
@@ -229,198 +186,152 @@ export default function Home() {
       connectivity: online ? "online" : "queued",
       website: String(form.get("website") || ""),
     };
-
     if (input.alias.length < 2 || input.title.length < 4) {
       toast.error("Completa el alias y un título claro.");
       setSubmitting(false);
       return;
     }
-
     if (!online) {
       savePending([...readPending(), input]);
       const optimistic: CommunityAlert = {
-        ...input,
-        id: crypto.randomUUID(),
+        sessionId: input.sessionId,
+        clientRequestId: input.clientRequestId,
+        createdAt: input.createdAt,
+        alias: input.alias,
+        category: input.category,
+        title: input.title,
+        details: input.details,
+        zone: input.zone,
+        connectivity: input.connectivity,
+        id: `pending-${input.clientRequestId}`,
         status: "active",
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+        expiresAt: new Date(new Date(input.createdAt).getTime() + 2 * 60 * 60 * 1000).toISOString(),
       };
       setAlerts((current) => [optimistic, ...current]);
+      setFeedState("cached");
       setOpen(false);
-      toast.info("Alerta guardada. Se enviará cuando vuelva la señal.");
+      formElement.reset();
+      toast.info("Solicitud guardada en este dispositivo. Se intentará enviar al recuperar señal.");
       setSubmitting(false);
       return;
     }
-
     try {
       const alert = await publish(input);
       setAlerts((current) => [alert, ...current]);
+      setFeedState("ready");
       setOpen(false);
-      toast.success("Alerta publicada por 2 horas.");
-      event.currentTarget.reset();
-    } catch {
-      savePending([...readPending(), { ...input, connectivity: "queued" }]);
-      toast.info("No hubo conexión. Guardamos la alerta para enviarla después.");
-      setOpen(false);
-    } finally {
-      setSubmitting(false);
-    }
+      formElement.reset();
+      toast.success("Solicitud publicada para esta sesión por 2 horas.");
+    } catch (error) {
+      if (error instanceof PublishError && error.status >= 400 && error.status < 500) toast.error("No pudimos publicar: revisa el contenido e inténtalo nuevamente.");
+      else {
+        savePending([...readPending(), { ...input, connectivity: "queued" }]);
+        toast.info("No pudimos confirmar el envío. Quedó pendiente en este dispositivo.");
+        setOpen(false);
+      }
+    } finally { setSubmitting(false); }
   }
 
   return (
-    <main className="min-h-screen pb-28">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-[var(--background)]/92 backdrop-blur-xl">
+    <main className="min-h-screen pb-10">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-[var(--background)]/92 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[0_8px_30px_rgb(124_58_237/35%)]">
-              <HeartHandshake size={21} aria-hidden="true" />
-            </span>
-            <div>
-              <p className="text-[0.72rem] font-bold uppercase tracking-[0.16em] text-violet-300">ARMY se cuida</p>
-              <p className="font-semibold leading-tight">Better Together</p>
-            </div>
+            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[0_8px_30px_rgb(124_58_237/35%)]"><HeartHandshake size={21} aria-hidden="true" /></span>
+            <div><p className="text-[0.75rem] font-bold uppercase tracking-[0.15em] text-violet-300">ARMY se cuida</p><p className="font-semibold leading-tight">Better Together</p></div>
           </div>
           <div className={`flex items-center gap-2 rounded-full border px-3 py-2 text-sm ${online ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100" : "border-amber-300/20 bg-amber-300/10 text-amber-100"}`}>
-            {online ? <Wifi size={16} /> : <WifiOff size={16} />}
-            <span>{online ? "En línea" : "Sin señal"}</span>
+            {online ? <Wifi size={16} aria-hidden="true" /> : <WifiOff size={16} aria-hidden="true" />}<span>{online ? "En línea" : "Sin señal"}</span>
           </div>
         </div>
       </header>
 
       <section className="mx-auto max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
-        <div className="mb-5 flex items-end justify-between gap-4">
-          <div>
-            <p className="mb-1 text-sm font-medium text-violet-300">Estadio · Hoy</p>
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">¿Qué está pasando cerca?</h1>
-          </div>
-          <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-sm font-medium text-emerald-200">
-            {activeCount} activas
-          </span>
-        </div>
-
-        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <button className="quick-card danger" type="button" onClick={() => { setSelectedCategory("emergency"); setOpen(true); }}><BellRing size={20} /> Emergencia</button>
-          <button className="quick-card" type="button" onClick={() => { setSelectedCategory("safe-point"); setOpen(true); }}><MapPin size={20} /> Punto seguro</button>
-          <button className="quick-card" type="button" onClick={() => { setSelectedCategory("supplies"); setOpen(true); }}><HeartHandshake size={20} /> Necesito algo</button>
-          <button className="quick-card" type="button" onClick={() => { setSelectedCategory("information"); setOpen(true); }}><ShieldCheck size={20} /> Aviso útil</button>
-        </div>
-
-        {!online && (
-          <div className="mb-4 flex gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-amber-50">
-            <WifiOff className="mt-0.5 shrink-0" size={20} />
-            <p><strong>Sigues acompañada.</strong> Puedes consultar lo último cargado y crear alertas; se enviarán al recuperar señal.</p>
-          </div>
-        )}
-
-        <div className="space-y-3" aria-label="Alertas cercanas">
-          {alerts.length === 0 && (
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-10 text-center">
-              <ShieldCheck className="mx-auto mb-3 text-emerald-300" size={32} />
-              <h2 className="text-lg font-semibold">No hay alertas activas en esta zona</h2>
-              <p className="mt-1 text-muted-foreground">Si necesitas comunicar algo, crea una alerta breve y usa solo una ubicación aproximada.</p>
-            </div>
-          )}
-          {alerts.map((alert) => {
-            const Icon = icons[alert.category];
-            const wasHelped = helped.includes(alert.id);
-            return (
-              <article className={`alert-card ${alert.category}`} key={alert.id}>
-                <div className="alert-icon"><Icon size={22} aria-hidden="true" /></div>
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-violet-200">{categoryLabels[alert.category]}</span>
-                    <span className="text-sm text-muted-foreground">{relativeTime(alert.createdAt)} · {alert.zone}</span>
-                  </div>
-                  <h2 className="text-lg font-semibold leading-snug">{alert.title}</h2>
-                  {alert.details && <p className="mt-1 leading-relaxed text-muted-foreground">{alert.details}</p>}
-                  <p className="mt-2 text-sm text-violet-200/70">Publicado por {alert.alias}</p>
-                  <div className="mt-3 flex gap-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        setHelped((current) => current.includes(alert.id) ? current : [...current, alert.id]);
-                        toast.success("Gracias. La persona sabrá que alguien puede ayudar.");
-                      }}
-                      disabled={wasHelped}
-                    >
-                      {wasHelped ? <CircleCheck size={16} /> : <HeartHandshake size={16} />}
-                      {wasHelped ? "Avisado" : "Puedo ayudar"}
-                    </Button>
-                  </div>
-                </div>
-              </article>
-            );
+        <div className="mb-4"><p className="mb-1 text-sm font-semibold text-violet-300">BTS WORLD TOUR ARIRANG · Santiago</p><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Elige tu fecha</h1></div>
+        <div className="session-strip mb-4" aria-label="Sesiones del concierto">
+          {eventSessions.map((session) => {
+            const selected = session.id === selectedSessionId;
+            return <button key={session.id} className={`session-button ${selected ? "selected" : ""}`} type="button" aria-pressed={selected} onClick={() => setSelectedSessionId(session.id)}><span>{session.shortDate}</span><small>20:00 aprox.</small></button>;
           })}
         </div>
 
-        <div className="mt-5 flex gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-muted-foreground">
-          <Info className="shrink-0 text-violet-300" size={19} />
-          <p>Better Together no reemplaza a los servicios de emergencia. Ante peligro inmediato, contacta al personal del recinto o a emergencias.</p>
+        <div className="event-moment mb-5">
+          <div><span className="phase-label">{phase}</span><h2 className="mt-2 text-2xl font-bold">{selectedSession.dateLabel}</h2><p className="mt-1 text-violet-100/70">Coliseo Central · Estadio Nacional</p></div>
+          <div className="countdown" aria-label="Tiempo hasta el inicio estimado">
+            {countdown.complete ? <p>La hora estimada ya pasó. Revisa las actualizaciones; esto no confirma que el show haya comenzado.</p> : <><span><strong>{countdown.days}</strong><small>días</small></span><span><strong>{countdown.hours}</strong><small>horas</small></span><span><strong>{countdown.minutes}</strong><small>min</small></span></>}
+          </div>
+          <p className="col-span-full flex items-center gap-2 text-sm text-violet-100/60"><Clock3 size={16} aria-hidden="true" /> Tiempo hasta el inicio estimado · 20:00 aprox.</p>
         </div>
-      </section>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0b0714]/92 p-3 backdrop-blur-xl">
-        <div className="mx-auto max-w-5xl">
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger render={<Button className="h-14 w-full rounded-2xl text-base font-bold shadow-[0_12px_40px_rgb(124_58_237/38%)]" />}>
-              <BellRing size={20} /> Crear una alerta
-            </DialogTrigger>
-            <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[#171026] text-white sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Crear una alerta</DialogTitle>
-                <DialogDescription className="text-violet-200/70">
-                  Usa una zona aproximada. No compartas nombres reales, teléfonos ni ubicaciones exactas.
-                </DialogDescription>
-              </DialogHeader>
-              <form className="space-y-4" onSubmit={handleSubmit}>
-                <div>
-                  <Label className="mb-2">Tipo de alerta</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {alertCategories.map((category) => (
-                      <button
-                        key={category}
-                        className={`category-choice ${category === "emergency" ? "urgent" : ""} ${selectedCategory === category ? "selected" : ""}`}
-                        type="button"
-                        onClick={() => setSelectedCategory(category)}
-                      >
-                        {categoryLabels[category]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="alias">Alias anónimo</Label>
-                  <Input id="alias" name="alias" maxLength={24} placeholder="Ej. PurpleMoon" required autoComplete="off" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="title">¿Qué está pasando?</Label>
-                  <Input id="title" name="title" maxLength={80} placeholder="Un mensaje corto y claro" required />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="details">Detalle opcional</Label>
-                  <Textarea id="details" name="details" maxLength={240} placeholder="Agrega solo lo necesario para poder ayudar" rows={3} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="zone">Zona aproximada</Label>
-                  <Select name="zone" defaultValue={zones[0]}>
-                    <SelectTrigger id="zone" className="h-11 w-full bg-white/5">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {zones.map((zone) => <SelectItem key={zone} value={zone}>{zone}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <input className="hidden" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
-                <Button className="h-12 w-full text-base font-bold" type="submit" disabled={submitting}>
-                  {submitting ? "Guardando…" : online ? "Publicar por 2 horas" : "Guardar para enviar después"}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+        <Tabs value={activeSection} onValueChange={setActiveSection}>
+          <TabsList className="section-tabs mb-5 h-auto w-full" aria-label="Secciones del evento">
+            <TabsTrigger value="info"><Info /> Info</TabsTrigger><TabsTrigger value="pulse"><Newspaper /> Pulse</TabsTrigger><TabsTrigger value="activities"><CalendarDays /> Actividades</TabsTrigger><TabsTrigger value="help"><HeartHandshake /> Ayuda</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="info" className="space-y-3">
+            <div className="section-heading"><div><p>Información práctica</p><h2>Prepárate para tu sesión</h2></div><span>Fuentes revisadas</span></div>
+            {informationItems.map((item) => <article className="content-card" key={item.id}>
+              <div className="flex flex-wrap items-start justify-between gap-2"><h3>{item.title}</h3><span className={`status-chip status-${item.status.toLowerCase()}`}>{item.status}</span></div>
+              <p className="mt-2 leading-relaxed text-violet-50/80">{item.value}</p>
+              <div className="source-row"><span>{item.scope} · Revisado {item.reviewedAt}</span><a href={item.sourceUrl} target="_blank" rel="noreferrer">{item.sourceLabel}<ExternalLink /></a></div>
+            </article>)}
+          </TabsContent>
+
+          <TabsContent value="pulse" className="space-y-3">
+            <div className="section-heading"><div><p>Pulse curado</p><h2>Actualizaciones con origen visible</h2></div><span>Sin cifras inventadas</span></div>
+            {pulseItems.map((item) => <article className="content-card pulse-card" key={item.id}>
+              <div className="flex items-center justify-between gap-3 text-sm"><span className="font-semibold text-violet-200">{item.source}</span><span className="status-chip">{item.kind}</span></div>
+              <h3 className="mt-3">{item.title}</h3><p className="mt-2 leading-relaxed text-violet-50/75">{item.summary}</p>
+              <div className="source-row"><span>{item.publishedLabel}</span><a href={item.url} target="_blank" rel="noreferrer">Abrir fuente<ExternalLink /></a></div>
+            </article>)}
+          </TabsContent>
+
+          <TabsContent value="activities" className="space-y-3">
+            <div className="section-heading"><div><p>Actividades</p><h2>Planes comprobables alrededor del evento</h2></div><span>Prioridad oficial</span></div>
+            {activities.map((activity) => <article className="content-card" key={activity.id}>
+              <div className="flex gap-3"><span className="content-icon"><TicketCheck /></span><div><h3>{activity.title}</h3><p className="mt-2 font-medium text-violet-100">{activity.schedule}</p><p className="mt-1 text-violet-50/70">{activity.location}</p></div></div>
+              <p className="mt-4 leading-relaxed text-violet-50/75">{activity.note}</p><div className="source-row"><span>Revisado {activity.reviewedAt}</span><a href={activity.sourceUrl} target="_blank" rel="noreferrer">{activity.sourceLabel}<ExternalLink /></a></div>
+            </article>)}
+          </TabsContent>
+
+          <TabsContent value="help" className="space-y-3">
+            <div className="section-heading"><div><p>Ayuda cotidiana · En prueba</p><h2>Solicitudes de {selectedSession.shortDate}</h2></div><span>{alerts.length} activas</span></div>
+            <div className="safety-note"><ShieldCheck aria-hidden="true" /><p><strong>Solo necesidades cotidianas.</strong> Para una urgencia, una persona perdida, riesgo médico o de seguridad, acude al personal del recinto o a los canales oficiales.</p></div>
+            {!online && <div className="offline-note"><WifiOff aria-hidden="true" /><p>{feedState === "cached" ? "Ves contenido guardado en este dispositivo. Puede estar desactualizado." : "Sin una carga anterior no podemos mostrar solicitudes. Puedes guardar una nueva para intentar enviarla al recuperar señal."}</p></div>}
+            {feedState === "loading" && <div className="empty-state"><RefreshCw className="animate-spin" /><h3>Cargando solicitudes</h3><p>Consultando esta sesión.</p></div>}
+            {feedState === "error" && alerts.length === 0 && <div className="empty-state"><WifiOff /><h3>No pudimos cargar las solicitudes</h3><p>No mostraremos ejemplos como si fueran actividad real.</p><Button variant="secondary" onClick={() => void loadAlerts(selectedSessionId)}>Reintentar</Button></div>}
+            {feedState !== "loading" && feedState !== "error" && alerts.length === 0 && <div className="empty-state"><ShieldCheck /><h3>No hay solicitudes activas</h3><p>Este estado es real para la sesión seleccionada.</p></div>}
+            {alerts.map((alert) => {
+              const Icon = alertIcons[alert.category];
+              const pending = alert.id.startsWith("pending-");
+              return <article className="alert-card" key={alert.id}><div className="alert-icon"><Icon aria-hidden="true" /></div><div className="min-w-0 flex-1">
+                <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold text-violet-200">{categoryLabels[alert.category]}</span><span className="text-sm text-muted-foreground">{relativeTime(alert.createdAt)} · {alert.zone}</span></div>
+                <h3 className="text-lg font-semibold leading-snug">{alert.title}</h3>{alert.details && <p className="mt-1 leading-relaxed text-muted-foreground">{alert.details}</p>}<p className="mt-2 text-sm text-violet-200/70">Alias: {alert.alias}</p>
+                {pending && <span className="mt-3 inline-flex rounded-full bg-amber-300/10 px-2.5 py-1 text-sm text-amber-100">Pendiente de envío en este dispositivo</span>}
+              </div></article>;
+            })}
+            {lastUpdatedAt && <p className="text-center text-sm text-violet-100/50">Última carga: {new Date(lastUpdatedAt).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}</p>}
+
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger render={<Button className="mt-2 h-14 w-full rounded-2xl text-base font-bold" />}><HeartHandshake /> Crear solicitud para {selectedSession.shortDate}</DialogTrigger>
+              <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[#171026] text-white sm:max-w-lg">
+                <DialogHeader><DialogTitle>Crear solicitud cotidiana</DialogTitle><DialogDescription className="text-violet-200/70">Se publicará solo en {selectedSession.dateLabel}. No compartas nombres reales, teléfonos ni ubicaciones exactas.</DialogDescription></DialogHeader>
+                <form className="space-y-4" onSubmit={handleSubmit}>
+                  <div><Label className="mb-2">Tipo de solicitud</Label><div className="grid grid-cols-3 gap-2">{enabledAlertCategories.map((category) => <button key={category} className={`category-choice ${selectedCategory === category ? "selected" : ""}`} type="button" onClick={() => setSelectedCategory(category)}>{categoryLabels[category]}</button>)}</div></div>
+                  <div className="grid gap-2"><Label htmlFor="alias">Alias anónimo</Label><Input id="alias" name="alias" maxLength={24} placeholder="Ej. PurpleMoon" required autoComplete="off" /></div>
+                  <div className="grid gap-2"><Label htmlFor="title">¿Qué necesitas compartir?</Label><Input id="title" name="title" maxLength={80} placeholder="Un mensaje corto y claro" required /></div>
+                  <div className="grid gap-2"><Label htmlFor="details">Detalle opcional</Label><Textarea id="details" name="details" maxLength={240} placeholder="Agrega solo lo necesario" rows={3} /></div>
+                  <div className="grid gap-2"><Label htmlFor="zone">Zona aproximada</Label><Select name="zone" defaultValue={zones[0]}><SelectTrigger id="zone" className="h-11 w-full bg-white/5"><SelectValue /></SelectTrigger><SelectContent>{zones.map((zone) => <SelectItem key={zone} value={zone}>{zone}</SelectItem>)}</SelectContent></Select></div>
+                  <input className="hidden" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
+                  <Button className="h-12 w-full text-base font-bold" type="submit" disabled={submitting}>{submitting ? "Guardando…" : online ? "Publicar por 2 horas" : "Guardar para intentar después"}</Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+        </Tabs>
+
+        <div className="mt-5 flex gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-muted-foreground"><Info className="shrink-0 text-violet-300" size={19} aria-hidden="true" /><p>Better Together reúne orientación comunitaria; no reemplaza al organizador, al personal del recinto ni a los servicios de emergencia.</p></div>
+      </section>
     </main>
   );
 }

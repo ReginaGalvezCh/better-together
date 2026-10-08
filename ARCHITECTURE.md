@@ -1,28 +1,30 @@
 # Arquitectura del MVP
 
-Better Together es una PWA móvil, anónima y *offline-first* para apoyo comunitario en eventos concurridos.
+Better Together es una PWA móvil para información comprobable y apoyo comunitario acotado en eventos concurridos.
 
 ## Flujo principal
 
-1. La persona revisa alertas activas de su zona.
-2. Puede ofrecer ayuda o crear una alerta con alias, categoría y zona aproximada.
-3. Si no hay señal, la alerta queda temporalmente en el almacenamiento local del dispositivo y se sincroniza al volver la conexión.
-4. Las alertas caducan a las dos horas para evitar información obsoleta.
+1. La persona elige una de las tres sesiones sin alterar la fase de las demás.
+2. Consulta información práctica, Pulse y actividades con fuente y fecha de revisión.
+3. Si usa Ayuda, solo ve y crea solicitudes cotidianas de la sesión seleccionada.
+4. Si no hay señal, la solicitud queda temporalmente en el dispositivo y se sincroniza con el mismo identificador al volver la conexión.
+5. Las solicitudes caducan dos horas después de su creación original, aunque hayan esperado en la cola.
 
 ## Capas
 
-- `app/page.tsx`: experiencia móvil, estado de conectividad y cola local.
+- `app/page.tsx`: experiencia multidía, secciones, estados de conectividad, caché y cola local.
 - `app/api/alerts/route.ts`: validación y acceso seguro a los datos.
-- `lib/alerts.ts`: contrato compartido, categorías y límites de entrada.
-- `db/schema.ts`: alertas y eventos analíticos anónimos.
+- `lib/events.ts`: sesiones, fases, cuenta regresiva y contenido curado.
+- `lib/alerts.ts`: contrato compartido, categorías habilitadas y límites de entrada.
+- `db/schema.ts`: solicitudes aisladas por sesión, idempotencia y eventos analíticos anónimos.
 - `public/sw.js`: caché mínima para abrir la app con conectividad limitada.
 
 ## Privacidad y seguridad
 
 No se solicitan nombres, correo, teléfono ni coordenadas exactas. Las métricas almacenan solamente tipo de evento, categoría, zona amplia, conectividad y hora. Las entradas se validan en servidor, tienen límites de longitud y se muestran como texto, nunca como HTML.
 
-La cola sin conexión no se considera almacenamiento seguro ni cifrado; por eso la interfaz advierte que no deben incluirse datos personales o ubicaciones exactas.
+La cola y la caché sin conexión no se consideran almacenamiento seguro ni cifrado; por eso la interfaz advierte que no deben incluirse datos personales o ubicaciones exactas. Las solicitudes de emergencia, búsqueda de personas, salud y seguridad quedan fuera de la publicación comunitaria.
 
 ## Decisiones acotadas
 
-El MVP no incluye mensajería privada, seguimiento GPS, perfiles persistentes, fotos ni mapas. Esas funciones elevarían el riesgo de acoso, exposición o moderación y requieren validación comunitaria antes de agregarlas.
+El MVP no incluye mensajería privada, seguimiento GPS, perfiles persistentes, fotos, mapas, confirmaciones de ayuda ni atención continua. Esas funciones elevarían el riesgo de acoso, exposición o moderación y requieren validación comunitaria antes de agregarlas.

@@ -1,9 +1,11 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const alerts = sqliteTable(
   "alerts",
   {
     id: text("id").primaryKey(),
+    sessionId: text("session_id").notNull().default("santiago-2026-10-14"),
+    clientRequestId: text("client_request_id"),
     alias: text("alias").notNull(),
     category: text("category").notNull(),
     title: text("title").notNull(),
@@ -16,7 +18,9 @@ export const alerts = sqliteTable(
   },
   (table) => [
     index("idx_alerts_status_created_at").on(table.status, table.createdAt),
+    index("idx_alerts_session_status_created_at").on(table.sessionId, table.status, table.createdAt),
     index("idx_alerts_zone_created_at").on(table.zone, table.createdAt),
+    uniqueIndex("idx_alerts_client_request_id").on(table.clientRequestId),
   ]
 );
 
