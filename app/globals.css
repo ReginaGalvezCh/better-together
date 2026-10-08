@@ -123,6 +123,13 @@ button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visibl
 .request-dialog { border: 1px solid var(--ink); background: var(--paper); color: var(--foreground); }
 .request-dialog input, .request-dialog textarea, .request-dialog button[role="combobox"] { background: #fff; color: var(--foreground); }
 .app-note { display: flex; gap: .75rem; border: 1px solid var(--border); border-radius: 1rem; background: rgb(255 253 248 / 75%); padding: 1rem; color: var(--muted-foreground); font-size: .85rem; }
+.site-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1.5rem; border-top: 1px solid var(--border); padding: 1.25rem .25rem .5rem; }
+.site-footer p { display: grid; gap: .1rem; color: var(--muted-foreground); font-size: .78rem; }
+.site-footer strong { color: var(--foreground); font-size: .9rem; }
+.social-links { display: flex; align-items: center; gap: .55rem; }
+.social-links a { display: grid; height: 40px; width: 40px; place-items: center; border: 1px solid var(--ink); border-radius: 50%; background: var(--paper); color: var(--foreground); transition: background .15s ease, color .15s ease, transform .15s ease; }
+.social-links a:hover { background: var(--signal); color: #fff; transform: translateY(-2px); }
+.social-links span { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78rem; font-weight: 900; letter-spacing: -.03em; }
 
 [data-theme="dark"] {
   --background: #101016; --foreground: #f8f6fb; --card: #1a1921; --card-foreground: #f8f6fb;

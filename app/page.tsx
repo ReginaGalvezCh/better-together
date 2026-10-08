@@ -424,6 +424,13 @@ export default function Home() {
         </Dialog>
 
         <div className="app-note mt-5"><Info className="shrink-0 text-primary" size={19} aria-hidden="true" /><p>Better Together reúne orientación comunitaria; no reemplaza al organizador, al personal del recinto ni a los servicios de emergencia.</p></div>
+        <footer className="site-footer">
+          <p><strong>Better Together</strong><span>Hecho con cuidado para la comunidad.</span></p>
+          <nav className="social-links" aria-label="Enlaces de Better Together">
+            <a href="https://github.com/ReginaGalvezCh/better-together" target="_blank" rel="noreferrer" aria-label="Ver Better Together en GitHub"><span aria-hidden="true">GH</span></a>
+            <a href="https://cl.linkedin.com/in/regina-galvez" target="_blank" rel="noreferrer" aria-label="Ver el perfil de Regina en LinkedIn"><span aria-hidden="true">in</span></a>
+          </nav>
+        </footer>
       </section>
     </main>
   );
