@@ -36,6 +36,12 @@ El catálogo usa los nombres y familias de colores del plano referencial de Tick
 
 ## Privacidad y seguridad
 
+### Recolección privada de Pulso (primer incremento)
+
+`lib/pulse-intake.ts` recibe hasta 100 publicaciones de X, Instagram o TikTok. Valida enlaces HTTPS a publicaciones, elimina parámetros de seguimiento, deduplica por enlace canónico (por ID en X) y permite pasar los enlaces de lotes anteriores. No visita URLs enviadas, no descarga medios y no interpreta texto como instrucciones. Filtra contexto local de BTS/Arirang, clasifica temas con reglas explícitas y descarta publicaciones de más de 24 horas o fechas futuras fuera de una tolerancia de cinco minutos. La sesión se proporciona explícitamente; no se deduce una fecha ni un sector de un hashtag.
+
+`npm run pulse:collect` procesa un arreglo JSON desde la entrada estándar y devuelve un lote para revisión privada. Cada objeto contiene `platform`, `url` y opcionalmente `text`, `publishedAt` (ISO con zona horaria) y `sessions` (`all` o IDs válidos). Un enlace sin contexto o fecha queda en `needs-context`. Las coincidencias sensibles quedan en `sensitive-review`, sin retener el texto. Las demás quedan en `pending-review`, con un extracto de hasta 180 caracteres; ese extracto no es un resumen generado ni una afirmación verificada. Las reglas no detectan todos los datos personales ni todos los rumores: todo requiere revisión humana. El comando no persiste datos, no publica tarjetas y no está conectado a la interfaz ni a una tarea programada. No se deben guardar sus resultados en Git.
+
 No se solicitan nombres, correo, teléfono ni coordenadas exactas. Las métricas almacenan solamente tipo de evento, categoría, zona amplia, conectividad y hora. Las entradas se validan en servidor, tienen límites de longitud y se muestran como texto, nunca como HTML.
 
 La cola y la caché sin conexión no se consideran almacenamiento seguro ni cifrado; por eso la interfaz advierte que no deben incluirse datos personales o ubicaciones exactas. Las solicitudes de emergencia, búsqueda de personas, salud y seguridad quedan fuera de la publicación comunitaria.
