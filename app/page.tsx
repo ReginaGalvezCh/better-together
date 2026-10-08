@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarDays, Clock3, ExternalLink, HeartHandshake, Info, MapPin, Newspaper, RefreshCw, ShieldCheck, Sparkles, TicketCheck, Wifi, WifiOff } from "lucide-react";
+import { CalendarDays, Cloud, CloudFog, CloudLightning, CloudRain, CloudSun, Clock3, Droplets, ExternalLink, HeartHandshake, Info, MapPin, Newspaper, RefreshCw, ShieldCheck, Snowflake, Sparkles, Sun, TicketCheck, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -12,12 +12,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { categoryLabels, enabledAlertCategories, type AlertInput, type CommunityAlert, zones } from "@/lib/alerts";
 import { activities, eventSessions, getCountdownParts, getDefaultSession, getSessionPhase, informationItems, pulseItems, type EventSessionId } from "@/lib/events";
+import { forecastForDate, weatherApiUrl, type WeatherForecast, type WeatherKind, type WeatherResponse } from "@/lib/weather";
 
 const alertIcons = { "safe-point": MapPin, supplies: HeartHandshake, information: Sparkles };
 const pendingKey = "better-together:pending-alerts:v2";
 const cacheKey = (sessionId: EventSessionId) => `better-together:alerts:${sessionId}`;
 type FeedState = "loading" | "ready" | "cached" | "error";
 type CachedFeed = { alerts: CommunityAlert[]; fetchedAt: string };
+type WeatherState = "loading" | "ready" | "unavailable" | "error";
+
+const weatherIcons: Record<WeatherKind, typeof Sun> = {
+  clear: Sun,
+  "partly-cloudy": CloudSun,
+  cloudy: Cloud,
+  fog: CloudFog,
+  rain: CloudRain,
+  storm: CloudLightning,
+  snow: Snowflake,
+};
 
 class PublishError extends Error {
   constructor(public status: number) { super("publish_failed"); }
@@ -54,10 +66,14 @@ export default function Home() {
   const [open, setOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<AlertInput["category"]>("safe-point");
   const [submitting, setSubmitting] = useState(false);
+  const [weather, setWeather] = useState<Record<string, WeatherForecast>>({});
+  const [weatherState, setWeatherState] = useState<WeatherState>("loading");
 
   const selectedSession = useMemo(() => eventSessions.find((session) => session.id === selectedSessionId) ?? eventSessions[0], [selectedSessionId]);
   const phase = getSessionPhase(selectedSession, now);
   const countdown = getCountdownParts(selectedSession, now);
+  const selectedWeather = weather[selectedSession.date];
+  const WeatherIcon = selectedWeather ? weatherIcons[selectedWeather.kind] : CloudSun;
 
   const publish = useCallback(async (input: AlertInput) => {
     const response = await fetch("/api/alerts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
@@ -110,6 +126,29 @@ export default function Home() {
     if (synced) toast.success(`${synced} solicitud${synced > 1 ? "es" : ""} sincronizada${synced > 1 ? "s" : ""}`);
     if (expired) toast.info(`${expired} solicitud${expired > 1 ? "es" : ""} guardada${expired > 1 ? "s" : ""} ya había${expired > 1 ? "n" : ""} vencido`);
   }, [publish, selectedSessionId]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const loadWeather = window.setTimeout(async () => {
+      try {
+        const response = await fetch(weatherApiUrl, { signal: controller.signal });
+        if (!response.ok) throw new Error("weather_failed");
+        const payload = (await response.json()) as WeatherResponse;
+        const available = Object.fromEntries(eventSessions.flatMap((session) => {
+          const forecast = forecastForDate(payload, session.date);
+          return forecast ? [[session.date, forecast]] : [];
+        }));
+        setWeather(available);
+        setWeatherState(Object.keys(available).length ? "ready" : "unavailable");
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") setWeatherState("error");
+      }
+    }, 0);
+    return () => {
+      window.clearTimeout(loadWeather);
+      controller.abort();
+    };
+  }, []);
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => void loadAlerts(selectedSessionId), 0);
@@ -234,11 +273,11 @@ export default function Home() {
 
   return (
     <main className="min-h-screen pb-10">
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-[var(--background)]/92 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-white/8 bg-[var(--background)]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[0_8px_30px_rgb(124_58_237/35%)]"><HeartHandshake size={21} aria-hidden="true" /></span>
-            <div><p className="text-[0.75rem] font-bold uppercase tracking-[0.15em] text-violet-300">ARMY se cuida</p><p className="font-semibold leading-tight">Better Together</p></div>
+            <span className="brand-mark"><HeartHandshake size={21} aria-hidden="true" /></span>
+            <div><p className="brand-kicker">ARMY se cuida</p><p className="font-semibold leading-tight">Better Together</p></div>
           </div>
           <div className={`flex items-center gap-2 rounded-full border px-3 py-2 text-sm ${online ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100" : "border-amber-300/20 bg-amber-300/10 text-amber-100"}`}>
             {online ? <Wifi size={16} aria-hidden="true" /> : <WifiOff size={16} aria-hidden="true" />}<span>{online ? "En línea" : "Sin señal"}</span>
@@ -247,7 +286,7 @@ export default function Home() {
       </header>
 
       <section className="mx-auto max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
-        <div className="mb-4"><p className="mb-1 text-sm font-semibold text-violet-300">BTS WORLD TOUR ARIRANG · Santiago</p><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Elige tu fecha</h1></div>
+        <div className="mb-4"><p className="eyebrow mb-1">BTS WORLD TOUR ARIRANG · Santiago</p><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">¿Qué día vas?</h1></div>
         <div className="session-strip mb-4" aria-label="Sesiones del concierto">
           {eventSessions.map((session) => {
             const selected = session.id === selectedSessionId;
@@ -256,11 +295,19 @@ export default function Home() {
         </div>
 
         <div className="event-moment mb-5">
-          <div><span className="phase-label">{phase}</span><h2 className="mt-2 text-2xl font-bold">{selectedSession.dateLabel}</h2><p className="mt-1 text-violet-100/70">Coliseo Central · Estadio Nacional</p></div>
+          <div className="event-summary"><span className="phase-label">{phase}</span><h2 className="mt-2 text-2xl font-bold">{selectedSession.dateLabel}</h2><p className="mt-1 text-muted-foreground">Coliseo Central · Estadio Nacional</p></div>
           <div className="countdown" aria-label="Tiempo hasta el inicio estimado">
             {countdown.complete ? <p>La hora estimada ya pasó. Revisa las actualizaciones; esto no confirma que el show haya comenzado.</p> : <><span><strong>{countdown.days}</strong><small>días</small></span><span><strong>{countdown.hours}</strong><small>horas</small></span><span><strong>{countdown.minutes}</strong><small>min</small></span></>}
           </div>
-          <p className="col-span-full flex items-center gap-2 text-sm text-violet-100/60"><Clock3 size={16} aria-hidden="true" /> Tiempo hasta el inicio estimado · 20:00 aprox.</p>
+          <div className="weather-card" aria-live="polite">
+            <span className="weather-icon"><WeatherIcon aria-hidden="true" /></span>
+            <div className="min-w-0 flex-1">
+              <p className="weather-label">Pronóstico para ese día</p>
+              {selectedWeather ? <><p className="weather-main">{selectedWeather.label} · {selectedWeather.max}° / {selectedWeather.min}°</p><p className="weather-detail"><Droplets size={14} aria-hidden="true" /> {selectedWeather.rainProbability}% de lluvia · Puede cambiar</p></> : <><p className="weather-main">{weatherState === "loading" ? "Consultando el clima…" : weatherState === "error" ? "No pudimos actualizarlo" : "Disponible más cerca de la fecha"}</p><p className="weather-detail">El pronóstico solo aparece cuando hay datos para este día.</p></>}
+            </div>
+            <a className="weather-source" href="https://open-meteo.com/" target="_blank" rel="noreferrer" aria-label="Fuente del pronóstico: Open-Meteo">Open-Meteo <ExternalLink /></a>
+          </div>
+          <p className="event-time"><Clock3 size={16} aria-hidden="true" /> Inicio estimado · 20:00</p>
         </div>
 
         <Tabs value={activeSection} onValueChange={setActiveSection}>
@@ -269,7 +316,7 @@ export default function Home() {
           </TabsList>
 
           <TabsContent value="info" className="space-y-3">
-            <div className="section-heading"><div><p>Información práctica</p><h2>Prepárate para tu sesión</h2></div><span>Fuentes revisadas</span></div>
+            <div className="section-heading"><div><p>Información práctica</p><h2>Lo esencial para llegar</h2></div><span>Revisado y enlazado</span></div>
             {informationItems.map((item) => <article className="content-card" key={item.id}>
               <div className="flex flex-wrap items-start justify-between gap-2"><h3>{item.title}</h3><span className={`status-chip status-${item.status.toLowerCase()}`}>{item.status}</span></div>
               <p className="mt-2 leading-relaxed text-violet-50/80">{item.value}</p>
@@ -278,7 +325,7 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="pulse" className="space-y-3">
-            <div className="section-heading"><div><p>Pulse curado</p><h2>Actualizaciones con origen visible</h2></div><span>Sin cifras inventadas</span></div>
+            <div className="section-heading"><div><p>Lo importante ahora</p><h2>Avisos para tu fecha</h2></div><span>Con fuente y fecha</span></div>
             {pulseItems.map((item) => <article className="content-card pulse-card" key={item.id}>
               <div className="flex items-center justify-between gap-3 text-sm"><span className="font-semibold text-violet-200">{item.source}</span><span className="status-chip">{item.kind}</span></div>
               <h3 className="mt-3">{item.title}</h3><p className="mt-2 leading-relaxed text-violet-50/75">{item.summary}</p>
@@ -287,7 +334,7 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="activities" className="space-y-3">
-            <div className="section-heading"><div><p>Actividades</p><h2>Planes comprobables alrededor del evento</h2></div><span>Prioridad oficial</span></div>
+            <div className="section-heading"><div><p>Para sumar al plan</p><h2>Actividades antes y después</h2></div><span>Información oficial</span></div>
             {activities.map((activity) => <article className="content-card" key={activity.id}>
               <div className="flex gap-3"><span className="content-icon"><TicketCheck /></span><div><h3>{activity.title}</h3><p className="mt-2 font-medium text-violet-100">{activity.schedule}</p><p className="mt-1 text-violet-50/70">{activity.location}</p></div></div>
               <p className="mt-4 leading-relaxed text-violet-50/75">{activity.note}</p><div className="source-row"><span>Revisado {activity.reviewedAt}</span><a href={activity.sourceUrl} target="_blank" rel="noreferrer">{activity.sourceLabel}<ExternalLink /></a></div>
@@ -314,7 +361,7 @@ export default function Home() {
 
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger render={<Button className="mt-2 h-14 w-full rounded-2xl text-base font-bold" />}><HeartHandshake /> Crear solicitud para {selectedSession.shortDate}</DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[#171026] text-white sm:max-w-lg">
+              <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[#171a24] text-white sm:max-w-lg">
                 <DialogHeader><DialogTitle>Crear solicitud cotidiana</DialogTitle><DialogDescription className="text-violet-200/70">Se publicará solo en {selectedSession.dateLabel}. No compartas nombres reales, teléfonos ni ubicaciones exactas.</DialogDescription></DialogHeader>
                 <form className="space-y-4" onSubmit={handleSubmit}>
                   <div><Label className="mb-2">Tipo de solicitud</Label><div className="grid grid-cols-3 gap-2">{enabledAlertCategories.map((category) => <button key={category} className={`category-choice ${selectedCategory === category ? "selected" : ""}`} type="button" onClick={() => setSelectedCategory(category)}>{categoryLabels[category]}</button>)}</div></div>

@@ -3,31 +3,31 @@
 @import "../vendor/shadcn-tailwind-4.13.0.css";
 
 :root {
-  --background: #0b0714;
-  --foreground: #fbf9ff;
-  --card: #171026;
-  --card-foreground: #fbf9ff;
-  --popover: #171026;
-  --popover-foreground: #fbf9ff;
+  --background: #090b10;
+  --foreground: #f7f7fb;
+  --card: #141720;
+  --card-foreground: #f7f7fb;
+  --popover: #171a24;
+  --popover-foreground: #f7f7fb;
   --primary: #8b5cf6;
   --primary-foreground: #ffffff;
-  --secondary: #2a1d40;
-  --secondary-foreground: #f4edff;
-  --muted: #21172f;
-  --muted-foreground: #b9aacd;
-  --accent: #33224c;
+  --secondary: #20232d;
+  --secondary-foreground: #f1effb;
+  --muted: #1b1e27;
+  --muted-foreground: #a7a8b4;
+  --accent: #272339;
   --accent-foreground: #ffffff;
   --destructive: #fb7185;
-  --border: #ffffff1f;
-  --input: #ffffff24;
+  --border: #ffffff18;
+  --input: #ffffff20;
   --ring: #a78bfa;
   --chart-1: #a78bfa;
   --chart-2: #f472b6;
   --chart-3: #38bdf8;
   --chart-4: #34d399;
   --chart-5: #fbbf24;
-  --radius: 0.875rem;
-  --sidebar: #120b20;
+  --radius: 1rem;
+  --sidebar: #10121a;
   --sidebar-foreground: #fbf9ff;
   --sidebar-primary: #8b5cf6;
   --sidebar-primary-foreground: #ffffff;
@@ -61,32 +61,45 @@ html { background: var(--background); }
 body {
   margin: 0;
   background:
-    radial-gradient(circle at 15% -10%, rgb(124 58 237 / 24%), transparent 32rem),
-    radial-gradient(circle at 95% 22%, rgb(236 72 153 / 13%), transparent 30rem),
+    radial-gradient(circle at 8% -12%, rgb(124 58 237 / 17%), transparent 31rem),
+    radial-gradient(circle at 100% 30%, rgb(99 102 241 / 7%), transparent 28rem),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
 }
 button { touch-action: manipulation; }
+.brand-mark { display: grid; height: 42px; width: 42px; place-items: center; border: 1px solid rgb(167 139 250 / 35%); border-radius: .9rem; background: linear-gradient(145deg, #8b5cf6, #6d42d8); color: #fff; box-shadow: 0 10px 28px rgb(76 29 149 / 25%); }
+.brand-kicker, .eyebrow { color: #b9a5ff; font-size: .75rem; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+.eyebrow { font-size: .8rem; letter-spacing: .03em; text-transform: none; }
 .session-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; }
-.session-button { display: grid; gap: .15rem; min-height: 64px; place-items: center; border: 1px solid var(--border); border-radius: 1rem; background: rgb(255 255 255 / 5%); color: var(--muted-foreground); font-weight: 750; }
+.session-button { display: grid; gap: .15rem; min-height: 64px; place-items: center; border: 1px solid var(--border); border-radius: 1rem; background: rgb(255 255 255 / 3.5%); color: var(--muted-foreground); font-weight: 750; transition: border-color .16s ease, background .16s ease, transform .16s ease; }
 .session-button small { font-size: .75rem; font-weight: 550; }
 .session-button:hover, .session-button:focus-visible { border-color: rgb(167 139 250 / 60%); outline: 3px solid rgb(167 139 250 / 25%); }
-.session-button.selected { border-color: #a78bfa; background: linear-gradient(135deg, rgb(124 58 237 / 34%), rgb(236 72 153 / 14%)); color: #fff; box-shadow: 0 14px 34px rgb(76 29 149 / 22%); }
-.event-moment { display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: center; border: 1px solid rgb(167 139 250 / 22%); border-radius: 1.4rem; background: linear-gradient(135deg, rgb(76 29 149 / 28%), rgb(23 16 38 / 85%)); padding: 1.1rem; }
-.phase-label { display: inline-flex; border-radius: 999px; background: rgb(167 139 250 / 16%); padding: .35rem .7rem; color: #ddd6fe; font-size: .8rem; font-weight: 750; }
+.session-button.selected { border-color: #8b5cf6; background: rgb(139 92 246 / 15%); color: #fff; box-shadow: inset 0 0 0 1px rgb(139 92 246 / 18%), 0 12px 28px rgb(0 0 0 / 18%); }
+.event-moment { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: center; border: 1px solid rgb(167 139 250 / 20%); border-radius: 1.35rem; background: rgb(19 21 30 / 92%); padding: 1.1rem; box-shadow: 0 20px 50px rgb(0 0 0 / 18%); }
+.phase-label { display: inline-flex; border: 1px solid rgb(167 139 250 / 18%); border-radius: 999px; background: rgb(139 92 246 / 12%); padding: .3rem .65rem; color: #d8cdff; font-size: .78rem; font-weight: 750; }
 .countdown { display: flex; gap: .5rem; }
-.countdown > span { display: grid; min-width: 58px; place-items: center; border: 1px solid var(--border); border-radius: 1rem; background: rgb(11 7 20 / 54%); padding: .65rem .4rem; }
+.countdown > span { display: grid; min-width: 58px; place-items: center; border: 1px solid var(--border); border-radius: .9rem; background: rgb(7 9 14 / 55%); padding: .65rem .4rem; }
 .countdown strong { font-size: 1.35rem; line-height: 1; }
 .countdown small { margin-top: .3rem; color: var(--muted-foreground); font-size: .72rem; }
 .countdown > p { max-width: 25rem; color: #ddd6fe; line-height: 1.5; }
-.section-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); justify-content: stretch; border: 1px solid var(--border); border-radius: 1rem; background: rgb(255 255 255 / 5%); padding: .3rem; }
+.weather-card { grid-column: 1 / -1; display: flex; min-width: 0; align-items: center; gap: .8rem; border: 1px solid rgb(125 211 252 / 17%); border-radius: 1rem; background: rgb(14 35 48 / 45%); padding: .85rem; }
+.weather-icon { display: grid; height: 42px; width: 42px; flex: none; place-items: center; border-radius: .8rem; background: rgb(56 189 248 / 10%); color: #7dd3fc; }
+.weather-icon svg { height: 22px; width: 22px; }
+.weather-label { color: #a6dff9; font-size: .72rem; font-weight: 750; letter-spacing: .03em; text-transform: uppercase; }
+.weather-main { margin-top: .1rem; font-size: .96rem; font-weight: 700; }
+.weather-detail { display: flex; align-items: center; gap: .3rem; margin-top: .15rem; color: var(--muted-foreground); font-size: .77rem; }
+.weather-source { display: inline-flex; flex: none; align-items: center; gap: .3rem; color: #a6dff9; font-size: .72rem; text-decoration: underline; text-underline-offset: 3px; }
+.weather-source svg { height: 12px; width: 12px; }
+.event-time { grid-column: 1 / -1; display: flex; align-items: center; gap: .45rem; color: var(--muted-foreground); font-size: .82rem; }
+.section-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); justify-content: stretch; border: 1px solid var(--border); border-radius: 1rem; background: rgb(255 255 255 / 3%); padding: .3rem; }
 .section-tabs button { min-height: 46px; min-width: 0; border-radius: .75rem; padding-inline: .45rem; font-size: .82rem; }
+.section-tabs button[data-state="active"] { background: #24212f; color: #fff; box-shadow: 0 5px 15px rgb(0 0 0 / 18%); }
 .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: .9rem; }
 .section-heading p { color: #c4b5fd; font-size: .85rem; font-weight: 750; }
 .section-heading h2 { margin-top: .15rem; font-size: 1.3rem; font-weight: 750; }
 .section-heading > span { border-radius: 999px; background: rgb(255 255 255 / 6%); padding: .4rem .7rem; color: var(--muted-foreground); font-size: .78rem; white-space: nowrap; }
-.content-card { border: 1px solid var(--border); border-radius: 1.15rem; background: rgb(23 16 38 / 84%); padding: 1rem; box-shadow: 0 18px 45px rgb(0 0 0 / 12%); }
+.content-card { border: 1px solid var(--border); border-radius: 1.15rem; background: rgb(20 23 32 / 90%); padding: 1rem; box-shadow: 0 16px 38px rgb(0 0 0 / 10%); }
 .content-card h3 { font-size: 1.08rem; font-weight: 750; line-height: 1.35; }
 .content-icon { display: grid; height: 44px; width: 44px; flex: none; place-items: center; border-radius: .9rem; background: rgb(139 92 246 / 18%); color: #c4b5fd; }
 .status-chip { display: inline-flex; border-radius: 999px; background: rgb(167 139 250 / 14%); padding: .25rem .55rem; color: #ddd6fe; font-size: .75rem; font-weight: 700; }
@@ -106,13 +119,13 @@ button { touch-action: manipulation; }
 .empty-state p { color: var(--muted-foreground); }
 .quick-card {
   display: flex; min-height: 74px; align-items: center; justify-content: center; gap: .55rem;
-  border: 1px solid var(--border); border-radius: 1rem; background: rgb(255 255 255 / 6%);
+  border: 1px solid var(--border); border-radius: 1rem; background: rgb(255 255 255 / 4%);
   padding: .8rem; color: #f4edff; font-weight: 650; text-align: left;
   transition: transform .16s ease, background .16s ease;
 }
 .quick-card:hover, .quick-card:focus-visible { background: rgb(139 92 246 / 16%); transform: translateY(-2px); outline: 2px solid transparent; box-shadow: 0 0 0 3px rgb(167 139 250 / 30%); }
 .quick-card.danger { border-color: rgb(251 113 133 / 30%); background: rgb(251 113 133 / 10%); color: #fecdd3; }
-.alert-card { display: flex; gap: 1rem; border: 1px solid var(--border); border-radius: 1.25rem; background: rgb(23 16 38 / 86%); padding: 1rem; box-shadow: 0 18px 45px rgb(0 0 0 / 16%); }
+.alert-card { display: flex; gap: 1rem; border: 1px solid var(--border); border-radius: 1.25rem; background: rgb(20 23 32 / 90%); padding: 1rem; box-shadow: 0 18px 45px rgb(0 0 0 / 12%); }
 .alert-icon { display: grid; height: 44px; width: 44px; flex: none; place-items: center; border-radius: .9rem; background: rgb(139 92 246 / 18%); color: #c4b5fd; }
 .alert-card.pink .alert-icon { background: rgb(236 72 153 / 16%); color: #f9a8d4; }
 .alert-card.blue .alert-icon { background: rgb(56 189 248 / 14%); color: #7dd3fc; }
@@ -126,6 +139,7 @@ button { touch-action: manipulation; }
   .event-moment { grid-template-columns: 1fr; }
   .countdown { width: 100%; }
   .countdown > span { flex: 1; }
+  .weather-source { align-self: flex-start; }
   .section-tabs button { gap: .25rem; font-size: .76rem; }
   .section-heading { align-items: start; }
   .section-heading > span { white-space: normal; text-align: right; }
@@ -134,5 +148,8 @@ button { touch-action: manipulation; }
   .session-button { min-height: 70px; font-size: .9rem; }
   .category-choice { min-height: 82px; font-size: .82rem; }
   .source-row { align-items: flex-start; flex-direction: column; }
+  .weather-card { align-items: flex-start; flex-wrap: wrap; }
+  .weather-card > div { min-width: calc(100% - 3.4rem); }
+  .weather-source { margin-left: 3.4rem; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }

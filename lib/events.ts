@@ -115,8 +115,8 @@ export const pulseItems = [
   {
     id: "tour-dates",
     source: "BIGHIT MUSIC",
-    title: "Las fechas de Santiago están publicadas en la gira oficial",
-    summary: "Revisa siempre la fecha de tu entrada antes de viajar al recinto.",
+    title: "Fechas de Santiago confirmadas en la gira oficial",
+    summary: "Comprueba que la fecha de tu entrada coincida con el concierto que elegiste.",
     publishedLabel: "Revisado el 8 oct 2026",
     url: "https://bighitsmusic.com/bts/tour",
     kind: "Oficial",
@@ -124,8 +124,8 @@ export const pulseItems = [
   {
     id: "ticket-info",
     source: "Ticketmaster Chile",
-    title: "Información práctica y preguntas frecuentes del concierto",
-    summary: "La información de ingreso puede cambiar. Better Together enlaza la fuente y conserva la fecha real de revisión.",
+    title: "Guía del concierto y accesos",
+    summary: "Antes de salir, revisa cómo ingresar, qué llevar y cualquier cambio informado por la organización.",
     publishedLabel: "Revisado el 8 oct 2026",
     url: "https://help.ticketmaster.cl/hc/es-cl/articles/45167383157905-BTS-WORLD-TOUR-ARIRANG",
     kind: "Organizador",
@@ -133,8 +133,8 @@ export const pulseItems = [
   {
     id: "ticket-format",
     source: "Ticketmaster y Quentro",
-    title: "Confirma el formato de tu entrada antes de salir",
-    summary: "Un ticket recibido en Quentro usa QR dinámico y no se reemplaza por una captura. Confirma qué formato corresponde a tu entrada.",
+    title: "Revisa el formato de tu entrada",
+    summary: "Si tu ticket está en Quentro, abre la app antes de llegar. El QR es dinámico y una captura no lo reemplaza.",
     publishedLabel: "Revisado el 8 oct 2026",
     url: "https://help.ticketmaster.cl/hc/es-cl/articles/49169818942609--Qu%C3%A9-es-y-c%C3%B3mo-usar-Quentro",
     kind: "Información útil",
