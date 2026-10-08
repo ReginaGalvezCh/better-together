@@ -17,6 +17,8 @@ La barra inferior conserva el selector Antes, Durante o Al salir sobre sus tres 
 
 ## Capas
 
+«Qué llevar» reemplaza a «Mi teléfono» en el momento Antes. La guía distingue el requisito oficial de entrada/documento, sugerencias propias para la espera y consejos derivados del pronóstico Open-Meteo ya consultado por la página, sin nuevas llamadas ni ubicación personal. Solo utiliza el pronóstico si coincide con la fecha seleccionada; si no hay datos, informa que no puede recomendar por clima. Los artículos sugeridos no se anuncian como permitidos y se enlazan las reglas de Ticketmaster. Las recomendaciones comunitarias quedan pendientes de revisión de fuentes reales. La preparación del teléfono se conserva en un desplegable dentro del mismo panel. El listado no guarda datos ni agrega seguimiento o permisos.
+
 Pulso ARMY reemplaza la lista vertical de Avisos con hasta tres temas editoriales por fecha y origen. Tiene tarjetas horizontales con swipe nativo y flechas explícitas, sin avance automático ni scroll infinito. La fecha/hora identifica la revisión editorial, no la publicación original ni una consulta en vivo. La selección inicial se revisó en fuentes oficiales de Ticketmaster; Comunidad muestra un estado vacío hasta incorporar publicaciones reales. No hay scraping, agente programado, métricas de popularidad, GPS ni índice de seguridad. Contenido incluido con la app; offline requiere cargarla previamente y los enlaces externos pueden no funcionar.
 
 - `app/page.tsx`: experiencia multidía, secciones, estados de conectividad, caché y cola local.

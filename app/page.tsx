@@ -499,7 +499,7 @@ export default function Home() {
                 </form>
               </DialogContent>
         </Dialog>
-        <QuickAccessDock key={selectedSessionId} sessionId={selectedSessionId} online={online} onMeeting={() => startRequest("safe-point")} onHelp={() => startRequest("supplies")} />
+        <QuickAccessDock key={selectedSessionId} sessionId={selectedSessionId} sessionDate={selectedSession.date} dateLabel={selectedSession.dateLabel} forecast={selectedWeather} online={online} onMeeting={() => startRequest("safe-point")} onHelp={() => startRequest("supplies")} />
         </>}
 
         <div className="app-note mt-5"><Info className="shrink-0 text-primary" size={19} aria-hidden="true" /><p>Better Together reúne orientación comunitaria; no reemplaza al organizador, al personal del recinto ni a los servicios de emergencia.</p></div>
