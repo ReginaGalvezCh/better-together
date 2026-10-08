@@ -17,6 +17,8 @@ export const tikTokSourceCandidates: readonly TikTokSourceCandidate[] = [
   { id: "bts-chileprojects", suppliedName: "bts.chileprojects", platform: "tiktok", origin: "community", verification: "pending", profileUrl: null, monitoringEnabled: false },
   { id: "catalipedema", suppliedName: "catalipedema", platform: "tiktok", origin: "community", verification: "pending", profileUrl: null, monitoringEnabled: false },
   { id: "ladanipo", suppliedName: "ladanipo_", platform: "tiktok", origin: "community", verification: "pending", profileUrl: null, monitoringEnabled: false },
+  { id: "cataschulbe", suppliedName: "cataschulbe", platform: "tiktok", origin: "community", verification: "pending", profileUrl: null, monitoringEnabled: false },
+  { id: "catahrsc", suppliedName: "catahrsc", platform: "tiktok", origin: "community", verification: "pending", profileUrl: null, monitoringEnabled: false },
 ];
 
 // Search seeds, not evidence of current trends or an active TikTok connection.

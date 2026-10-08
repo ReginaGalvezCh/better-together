@@ -17,7 +17,7 @@ La barra inferior conserva el selector Antes, Durante o Al salir sobre sus tres 
 
 ## Capas
 
-La lista inicial de TikTok está en `lib/pulse-sources.ts`: siete nombres entregados por la usuaria, conservados sin inferir usuarios ni enlaces. Son candidatos comunitarios pendientes de verificación, con monitoreo desactivado; no alimentan todavía el Pulso público. Los hashtags son semillas propuestas, no tendencias confirmadas. Activar una fuente requiere confirmar el perfil y resolver el acceso permitido a los datos; el registro de un candidato no activa un agente ni una tarea programada.
+La lista inicial de TikTok está en `lib/pulse-sources.ts`: nueve nombres entregados por la usuaria, conservados sin inferir usuarios ni enlaces. Son candidatos comunitarios pendientes de verificación, con monitoreo desactivado; no alimentan todavía el Pulso público. Los hashtags son semillas propuestas, no tendencias confirmadas. Activar una fuente requiere confirmar el perfil y resolver el acceso permitido a los datos; el registro de un candidato no activa un agente ni una tarea programada.
 
 Pulso ARMY reemplaza la lista vertical de Avisos con hasta tres temas editoriales por fecha y origen. Tiene tarjetas horizontales con swipe nativo y flechas explícitas, sin avance automático ni scroll infinito. La fecha/hora identifica la revisión editorial, no la publicación original ni una consulta en vivo. La selección inicial se revisó en fuentes oficiales de Ticketmaster; Comunidad muestra un estado vacío hasta incorporar publicaciones reales. No hay scraping, agente programado, métricas de popularidad, GPS ni índice de seguridad. Contenido incluido con la app; offline requiere cargarla previamente y los enlaces externos pueden no funcionar.
 
