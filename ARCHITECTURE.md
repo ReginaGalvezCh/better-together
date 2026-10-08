@@ -18,6 +18,8 @@ Better Together es una PWA móvil para información comprobable y apoyo comunita
 - `lib/events.ts`: sesiones, fases, cuenta regresiva y contenido curado.
 - `lib/alerts.ts`: contrato compartido, categorías habilitadas y límites de entrada.
 - `lib/sectors.ts`: catálogo de sectores, validación y filtrado sin coordenadas.
+
+El catálogo usa los nombres y familias de colores del plano referencial de Ticketmaster, revisado el 8 de octubre de 2026. El diagrama propio simplifica la distribución alrededor del escenario 360° y enlaza la fuente; no representa puertas, rutas ni puntos seguros verificados. Cancha Andes y Cancha Pacífico distinguen accesos según la entrada, aunque comparten el espacio interior. Las zonas de la versión anterior siguen aceptándose para sincronizar solicitudes pendientes y se muestran en la vista general; no se reasignan a sectores nuevos.
 - `db/schema.ts`: solicitudes aisladas por sesión, idempotencia y eventos analíticos anónimos.
 - `public/sw.js`: caché mínima para abrir la app con conectividad limitada.
 

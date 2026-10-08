@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { categoryLabels, enabledAlertCategories, type AlertInput, type CommunityAlert } from "@/lib/alerts";
 import { activities, eventSessions, getCountdownParts, getDefaultSession, getSessionPhase, informationItems, pulseItems, type EventSessionId } from "@/lib/events";
-import { filterByZone, isZone, sectors, zones, type Zone } from "@/lib/sectors";
+import { filterByZone, isZone, sectors, sectorSource, type Zone } from "@/lib/sectors";
 import { forecastForDate, weatherApiUrl, type WeatherForecast, type WeatherKind, type WeatherResponse } from "@/lib/weather";
 
 const alertIcons = { "safe-point": MapPin, supplies: HeartHandshake, information: Sparkles };
@@ -72,7 +72,7 @@ export default function Home() {
   const [weatherState, setWeatherState] = useState<WeatherState>("loading");
   const [darkMode, setDarkMode] = useState(false);
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
-  const [requestZone, setRequestZone] = useState<Zone>(zones[0]);
+  const [requestZone, setRequestZone] = useState<Zone>(sectors[0].id);
 
   const selectedSession = useMemo(() => eventSessions.find((session) => session.id === selectedSessionId) ?? eventSessions[0], [selectedSessionId]);
   const phase = getSessionPhase(selectedSession, now);
@@ -217,7 +217,7 @@ export default function Home() {
           category: { type: "string", enum: enabledAlertCategories },
           title: { type: "string", minLength: 4, maxLength: 80 },
           details: { type: "string", maxLength: 240 },
-          zone: { type: "string", enum: zones },
+          zone: { type: "string", enum: sectors.map((sector) => sector.id) },
           sessionId: { type: "string", enum: eventSessions.map((session) => session.id) },
         },
         required: ["alias", "category", "title", "zone", "sessionId"],
@@ -418,23 +418,24 @@ export default function Home() {
             <section className="sector-panel" aria-labelledby="sector-map-title">
               <div className="sector-panel-heading">
                 <span className="sector-heading-icon"><MapIcon aria-hidden="true" /></span>
-                <div><p className="eyebrow">Mapa sin GPS</p><h3 id="sector-map-title">¿En qué sector estás?</h3><p>Elige una zona para ver avisos cercanos. Puedes cambiarla cuando quieras.</p></div>
+                <div><p className="eyebrow">Tu sector, a mano</p><h3 id="sector-map-title">¿En qué sector estás?</h3><p>Busca el nombre de tu entrada y elige dónde estás ahora.</p></div>
                 <span className="privacy-chip"><ShieldCheck aria-hidden="true" /> Sin ubicación exacta</span>
               </div>
               <div className="sector-map" aria-label="Sectores aproximados del recinto">
                 {sectors.map((sector) => {
                   const selected = selectedZone === sector.id;
                   const activeCount = alerts.filter((alert) => alert.zone === sector.id).length;
-                  return <button key={sector.id} className={`sector-button sector-${sector.position} ${selected ? "selected" : ""}`} type="button" aria-pressed={selected} aria-label={`${sector.id}. ${sector.description}${activeCount ? `. ${activeCount} solicitudes activas` : ". Sin solicitudes activas"}`} onClick={() => chooseZone(sector.id)}>
-                    <span>{sector.shortLabel}</span>{activeCount > 0 && <strong aria-hidden="true">{activeCount}</strong>}
+                  return <button key={sector.id} style={{ backgroundColor: sector.color, color: sector.ink }} className={`sector-button sector-${sector.position} ${selected ? "selected" : ""}`} type="button" aria-pressed={selected} aria-label={`${sector.id}${selected ? ". Seleccionado" : ""}${activeCount ? `. ${activeCount} solicitud${activeCount === 1 ? " activa" : "es activas"}` : ". Sin solicitudes activas"}`} onClick={() => chooseZone(sector.id)}>
+                    <span>{selected && <span aria-hidden="true">✓ </span>}{sector.shortLabel}</span>{activeCount > 0 && <strong aria-hidden="true">{activeCount}</strong>}
                   </button>;
                 })}
-                <span className="sector-stage" aria-hidden="true">Escenario</span>
+                <span className="sector-stage" aria-hidden="true">Escenario<br />360°</span>
               </div>
               <div className="sector-selection">
                 <div><strong>{selectedZone ? `Viendo ${selectedZone}` : "Viendo todos los sectores"}</strong><p>La selección queda guardada únicamente en este dispositivo.</p></div>
                 <button className="all-zones-button" type="button" aria-pressed={selectedZone === null} onClick={() => chooseZone(null)}>Ver todos</button>
               </div>
+              <div className="sector-reference"><p>Esquema referencial · Cancha Andes y Pacífico comparten la cancha 360°. Ingresa por el sector de tu entrada. Los puntos de encuentro se acuerdan por separado.</p><a href={sectorSource} target="_blank" rel="noreferrer">Ver plano en Ticketmaster <ExternalLink size={13} aria-hidden="true" /></a></div>
             </section>
             <div className="safety-note"><ShieldCheck aria-hidden="true" /><p><strong>Solo necesidades cotidianas.</strong> Para una urgencia, una persona perdida, riesgo médico o de seguridad, acude al personal del recinto o a los canales oficiales.</p></div>
             {!online && <div className="offline-note"><WifiOff aria-hidden="true" /><p>{feedState === "cached" ? "Ves contenido guardado en este dispositivo. Puede estar desactualizado." : "Sin una carga anterior no podemos mostrar solicitudes. Puedes guardar una nueva para intentar enviarla al recuperar señal."}</p></div>}
@@ -464,7 +465,7 @@ export default function Home() {
                   <div className="grid gap-2"><Label htmlFor="alias">Alias anónimo</Label><Input id="alias" name="alias" maxLength={24} placeholder="Ej. PurpleMoon" required autoComplete="off" /></div>
                   <div className="grid gap-2"><Label htmlFor="title">¿Qué necesitas compartir?</Label><Input id="title" name="title" maxLength={80} placeholder="Un mensaje corto y claro" required /></div>
                   <div className="grid gap-2"><Label htmlFor="details">Detalle opcional</Label><Textarea id="details" name="details" maxLength={240} placeholder="Agrega solo lo necesario" rows={3} /></div>
-                  <div className="grid gap-2"><Label htmlFor="zone">Zona aproximada</Label><Select name="zone" value={requestZone} onValueChange={(value) => { if (isZone(value)) setRequestZone(value); }}><SelectTrigger id="zone" className="h-11 w-full"><SelectValue /></SelectTrigger><SelectContent>{zones.map((zone) => <SelectItem key={zone} value={zone}>{zone}</SelectItem>)}</SelectContent></Select><p className="text-xs text-muted-foreground">Publicamos solo el nombre del sector, nunca coordenadas.</p></div>
+                  <div className="grid gap-2"><Label htmlFor="zone">Zona aproximada</Label><Select name="zone" value={requestZone} onValueChange={(value) => { if (isZone(value)) setRequestZone(value); }}><SelectTrigger id="zone" className="h-11 w-full"><SelectValue /></SelectTrigger><SelectContent>{sectors.map((sector) => <SelectItem key={sector.id} value={sector.id}>{sector.id}</SelectItem>)}</SelectContent></Select><p className="text-xs text-muted-foreground">Publicamos solo el nombre del sector, nunca coordenadas.</p></div>
                   <input className="hidden" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
                   <Button className="h-12 w-full text-base font-bold" type="submit" disabled={submitting}>{submitting ? "Guardando…" : online ? "Publicar por 2 horas" : "Guardar para intentar después"}</Button>
                 </form>
