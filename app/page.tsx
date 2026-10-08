@@ -5,6 +5,7 @@ import { CalendarDays, Cloud, CloudFog, CloudLightning, CloudRain, CloudSun, Clo
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TicketSetup, type TicketPreference } from "@/components/ticket-setup";
+import { QuickAccessDock } from "@/components/quick-access-dock";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -358,7 +359,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen pb-10">
+    <main className={`min-h-screen pb-10 ${ticket && !editingTicket ? "has-quick-dock" : ""}`}>
       <header className="sticky top-0 z-30 border-b bg-[var(--background)]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
@@ -397,12 +398,6 @@ export default function Home() {
           </div>
           <p className="event-time"><Clock3 size={16} aria-hidden="true" /> Inicio estimado · 20:00</p>
         </div>
-
-        <section className="quick-actions mb-5" aria-labelledby="quick-actions-title">
-          <div className="quick-actions-heading"><p className="eyebrow">Acciones rápidas</p><h2 id="quick-actions-title">¿Qué necesitas ahora?</h2></div>
-          <button className="primary-action" type="button" onClick={() => startRequest("supplies")}><span className="action-icon"><HeartHandshake aria-hidden="true" /></span><span><strong>Necesito ayuda</strong><small>Agua, cargador o artículos básicos</small></span></button>
-          <button className="primary-action meeting" type="button" onClick={() => startRequest("safe-point")}><span className="action-icon"><MapPin aria-hidden="true" /></span><span><strong>Punto de encuentro</strong><small>Comparte una zona fácil de reconocer</small></span></button>
-        </section>
 
         <Tabs value={activeSection} onValueChange={setActiveSection}>
           <TabsList className="section-tabs mb-5 h-auto w-full" aria-label="Secciones del evento">
@@ -507,6 +502,7 @@ export default function Home() {
                 </form>
               </DialogContent>
         </Dialog>
+        <QuickAccessDock key={selectedSessionId} sessionId={selectedSessionId} online={online} onMeeting={() => startRequest("safe-point")} onHelp={() => startRequest("supplies")} />
         </>}
 
         <div className="app-note mt-5"><Info className="shrink-0 text-primary" size={19} aria-hidden="true" /><p>Better Together reúne orientación comunitaria; no reemplaza al organizador, al personal del recinto ni a los servicios de emergencia.</p></div>
