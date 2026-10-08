@@ -17,9 +17,12 @@ La barra inferior conserva el selector Antes, Durante o Al salir sobre sus tres 
 
 ## Capas
 
+El lector de fanchants se prueba desde Inicio sin reemplazar los accesos de ayuda o encuentro del dock. Usa bloques de indicación y grito, navegación manual y una región desplazable. El bloque actual tiene borde y `aria-current`; no hay micrófono, audio, tiempos automáticos ni letras completas. La demostración es contenido original explícitamente etiquetado, no una guía real ni un setlist confirmado. El contenido está incluido en el código y no consulta servicios externos; el uso sin conexión requiere cargar previamente la app. Las guías reales y el acceso definitivo durante el concierto quedan pendientes de validar tras esta prueba.
+
 - `app/page.tsx`: experiencia multidía, secciones, estados de conectividad, caché y cola local.
 - `components/ticket-setup.tsx`: selección inicial de fecha y sector de entrada.
 - `components/quick-access-dock.tsx` y `lib/quick-actions.ts`: acciones por momento, guías locales y enlaces externos sin GPS.
+- `components/fanchant-reader.tsx` y `lib/fanchants.ts`: lector manual y contenido de demostración.
 - `app/api/alerts/route.ts`: validación y acceso seguro a los datos.
 - `lib/events.ts`: sesiones, fases, cuenta regresiva y contenido curado.
 - `lib/alerts.ts`: contrato compartido, categorías habilitadas y límites de entrada.
