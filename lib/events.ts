@@ -111,36 +111,6 @@ export const informationItems = [
   },
 ] as const;
 
-export const pulseItems = [
-  {
-    id: "tour-dates",
-    source: "BIGHIT MUSIC",
-    title: "Fechas de Santiago confirmadas en la gira oficial",
-    summary: "Comprueba que la fecha de tu entrada coincida con el concierto que elegiste.",
-    publishedLabel: "Revisado el 8 oct 2026",
-    url: "https://bighitsmusic.com/bts/tour",
-    kind: "Oficial",
-  },
-  {
-    id: "ticket-info",
-    source: "Ticketmaster Chile",
-    title: "Guía del concierto y accesos",
-    summary: "Antes de salir, revisa cómo ingresar, qué llevar y cualquier cambio informado por la organización.",
-    publishedLabel: "Revisado el 8 oct 2026",
-    url: "https://help.ticketmaster.cl/hc/es-cl/articles/45167383157905-BTS-WORLD-TOUR-ARIRANG",
-    kind: "Organizador",
-  },
-  {
-    id: "ticket-format",
-    source: "Ticketmaster y Quentro",
-    title: "Revisa el formato de tu entrada",
-    summary: "Si tu ticket está en Quentro, abre la app antes de llegar. El QR es dinámico y una captura no lo reemplaza.",
-    publishedLabel: "Revisado el 8 oct 2026",
-    url: "https://help.ticketmaster.cl/hc/es-cl/articles/49169818942609--Qu%C3%A9-es-y-c%C3%B3mo-usar-Quentro",
-    kind: "Información útil",
-  },
-] as const;
-
 export const activities = [
   {
     id: "bts-pop-up",
