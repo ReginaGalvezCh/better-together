@@ -36,6 +36,9 @@ html { background: var(--background); }
 body { margin: 0; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
 main { background: linear-gradient(rgb(109 63 229 / 4%) 1px, transparent 1px), linear-gradient(90deg, rgb(109 63 229 / 4%) 1px, transparent 1px), radial-gradient(circle at 8% 0%, rgb(109 63 229 / 13%), transparent 28rem), var(--background); background-size: 28px 28px, 28px 28px, auto, auto; }
 button { touch-action: manipulation; }
+button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
+.header-tools { display: flex; align-items: center; gap: .55rem; }
+.theme-toggle { display: grid; height: 38px; width: 38px; place-items: center; border: 1px solid var(--ink); border-radius: 50%; background: var(--paper); color: var(--foreground); }
 .brand-mark { display: grid; height: 42px; width: 42px; place-items: center; border: 2px solid var(--ink); border-radius: .85rem; background: var(--signal); color: #fff; box-shadow: 3px 3px 0 var(--ink); transform: rotate(-2deg); }
 .brand-kicker, .eyebrow { color: var(--signal); font-size: .75rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .eyebrow { font-size: .78rem; letter-spacing: .045em; }
@@ -121,6 +124,30 @@ button { touch-action: manipulation; }
 .request-dialog input, .request-dialog textarea, .request-dialog button[role="combobox"] { background: #fff; color: var(--foreground); }
 .app-note { display: flex; gap: .75rem; border: 1px solid var(--border); border-radius: 1rem; background: rgb(255 253 248 / 75%); padding: 1rem; color: var(--muted-foreground); font-size: .85rem; }
 
+[data-theme="dark"] {
+  --background: #101016; --foreground: #f8f6fb; --card: #1a1921; --card-foreground: #f8f6fb;
+  --popover: #1a1921; --popover-foreground: #f8f6fb; --secondary: #292531; --secondary-foreground: #f8f6fb;
+  --muted: #25232b; --muted-foreground: #c3bec9; --accent: #302946; --accent-foreground: #fff;
+  --border: #48434e; --input: #5b5562; --ink: #f8f6fb; --paper: #1a1921; --shadow: #07070a;
+}
+[data-theme="dark"] main { background: linear-gradient(rgb(167 139 250 / 5%) 1px, transparent 1px), linear-gradient(90deg, rgb(167 139 250 / 5%) 1px, transparent 1px), radial-gradient(circle at 8% 0%, rgb(109 63 229 / 22%), transparent 28rem), var(--background); background-size: 28px 28px, 28px 28px, auto, auto; }
+[data-theme="dark"] .brand-mark, [data-theme="dark"] .session-button.selected, [data-theme="dark"] .event-moment, [data-theme="dark"] .primary-action { box-shadow: 4px 4px 0 var(--shadow); }
+[data-theme="dark"] .session-button { background: rgb(26 25 33 / 85%); }
+[data-theme="dark"] .session-button.selected { background: var(--signal); color: #fff; }
+[data-theme="dark"] .countdown > span { background: #24202f; }
+[data-theme="dark"] .phase-label, [data-theme="dark"] .status-chip { background: #30264b; color: #d9ccff; }
+[data-theme="dark"] .weather-card { border-color: #266c74; background: #142d31; }
+[data-theme="dark"] .weather-label, [data-theme="dark"] .weather-source { color: #8ddbe2; }
+[data-theme="dark"] .weather-detail { color: #b7d6d8; }
+[data-theme="dark"] .primary-action { background: #2e2645; }
+[data-theme="dark"] .primary-action.meeting { background: #193339; }
+[data-theme="dark"] .primary-action small { color: #c3bec9; }
+[data-theme="dark"] .section-tabs { background: rgb(26 25 33 / 92%); }
+[data-theme="dark"] .section-tabs button[data-state="active"] { background: #f8f6fb; color: #18151e; }
+[data-theme="dark"] .community-status, [data-theme="dark"] .content-card, [data-theme="dark"] .alert-card, [data-theme="dark"] .category-choice { background: var(--paper); }
+[data-theme="dark"] .more-details, [data-theme="dark"] .app-note { background: rgb(26 25 33 / 80%); }
+[data-theme="dark"] .request-dialog input, [data-theme="dark"] .request-dialog textarea, [data-theme="dark"] .request-dialog button[role="combobox"] { background: #24222b; }
+
 @media (max-width: 640px) {
   .event-moment { grid-template-columns: 1fr; }
   .countdown { width: 100%; }
@@ -136,11 +163,14 @@ button { touch-action: manipulation; }
   .session-button { min-height: 68px; font-size: .9rem; }
   .category-choice { min-height: 82px; font-size: .82rem; }
   .source-row { align-items: flex-start; flex-direction: column; }
-  .weather-card { align-items: flex-start; flex-wrap: wrap; }
-  .weather-card > div { min-width: calc(100% - 3.4rem); }
-  .weather-source { margin-left: 3.4rem; }
+  .weather-card { position: relative; align-items: flex-start; padding-right: 2.7rem; }
+  .weather-card > div { min-width: 0; }
+  .weather-source { position: absolute; top: .8rem; right: .8rem; margin: 0; font-size: 0; }
+  .weather-source svg { height: 16px; width: 16px; }
   .primary-action { min-height: 112px; align-items: flex-start; flex-direction: column; }
   .community-status { grid-template-columns: auto minmax(0, 1fr); }
   .community-status button { grid-column: 2; justify-self: start; }
+  .connection-pill span { position: absolute; height: 1px; width: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .connection-pill { height: 38px; width: 38px; justify-content: center; padding: 0; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }

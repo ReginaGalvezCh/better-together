@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarDays, Cloud, CloudFog, CloudLightning, CloudRain, CloudSun, Clock3, Droplets, ExternalLink, HeartHandshake, Info, MapPin, Newspaper, RefreshCw, ShieldCheck, Snowflake, Sparkles, Sun, Wifi, WifiOff } from "lucide-react";
+import { CalendarDays, Cloud, CloudFog, CloudLightning, CloudRain, CloudSun, Clock3, Droplets, ExternalLink, HeartHandshake, Info, MapPin, Moon, Newspaper, RefreshCw, ShieldCheck, Snowflake, Sparkles, Sun, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -68,6 +68,7 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
   const [weather, setWeather] = useState<Record<string, WeatherForecast>>({});
   const [weatherState, setWeatherState] = useState<WeatherState>("loading");
+  const [darkMode, setDarkMode] = useState(false);
 
   const selectedSession = useMemo(() => eventSessions.find((session) => session.id === selectedSessionId) ?? eventSessions[0], [selectedSessionId]);
   const phase = getSessionPhase(selectedSession, now);
@@ -126,6 +127,15 @@ export default function Home() {
     if (synced) toast.success(`${synced} solicitud${synced > 1 ? "es" : ""} sincronizada${synced > 1 ? "s" : ""}`);
     if (expired) toast.info(`${expired} solicitud${expired > 1 ? "es" : ""} guardada${expired > 1 ? "s" : ""} ya había${expired > 1 ? "n" : ""} vencido`);
   }, [publish, selectedSessionId]);
+
+  useEffect(() => {
+    const restoreTheme = window.setTimeout(() => {
+      const useDark = localStorage.getItem("better-together:theme") === "dark";
+      setDarkMode(useDark);
+      document.documentElement.dataset.theme = useDark ? "dark" : "light";
+    }, 0);
+    return () => window.clearTimeout(restoreTheme);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -277,6 +287,15 @@ export default function Home() {
     setOpen(true);
   }
 
+  function toggleTheme() {
+    setDarkMode((current) => {
+      const next = !current;
+      document.documentElement.dataset.theme = next ? "dark" : "light";
+      localStorage.setItem("better-together:theme", next ? "dark" : "light");
+      return next;
+    });
+  }
+
   return (
     <main className="min-h-screen pb-10">
       <header className="sticky top-0 z-30 border-b bg-[var(--background)]/90 backdrop-blur-xl">
@@ -285,8 +304,11 @@ export default function Home() {
             <span className="brand-mark"><HeartHandshake size={21} aria-hidden="true" /></span>
             <div><p className="brand-kicker">ARMY se cuida</p><p className="font-semibold leading-tight">Better Together</p></div>
           </div>
-          <div className={`connection-pill ${online ? "online" : "offline"}`}>
-            {online ? <Wifi size={16} aria-hidden="true" /> : <WifiOff size={16} aria-hidden="true" />}<span>{online ? "En línea" : "Sin señal"}</span>
+          <div className="header-tools">
+            <button className="theme-toggle" type="button" onClick={toggleTheme} aria-label={darkMode ? "Usar modo claro" : "Usar modo nocturno"}>{darkMode ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}</button>
+            <div className={`connection-pill ${online ? "online" : "offline"}`}>
+              {online ? <Wifi size={16} aria-hidden="true" /> : <WifiOff size={16} aria-hidden="true" />}<span>{online ? "En línea" : "Sin señal"}</span>
+            </div>
           </div>
         </div>
       </header>
