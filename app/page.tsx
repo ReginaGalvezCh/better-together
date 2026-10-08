@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarDays, Cloud, CloudFog, CloudLightning, CloudRain, CloudSun, Clock3, Droplets, ExternalLink, HeartHandshake, Info, MapPin, Moon, Newspaper, RefreshCw, ShieldCheck, Snowflake, Sparkles, Sun, Wifi, WifiOff } from "lucide-react";
+import { CalendarDays, Cloud, CloudFog, CloudLightning, CloudRain, CloudSun, Clock3, Droplets, ExternalLink, HeartHandshake, Info, Map as MapIcon, MapPin, Moon, Newspaper, RefreshCw, ShieldCheck, Snowflake, Sparkles, Sun, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,12 +10,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { categoryLabels, enabledAlertCategories, type AlertInput, type CommunityAlert, zones } from "@/lib/alerts";
+import { categoryLabels, enabledAlertCategories, type AlertInput, type CommunityAlert } from "@/lib/alerts";
 import { activities, eventSessions, getCountdownParts, getDefaultSession, getSessionPhase, informationItems, pulseItems, type EventSessionId } from "@/lib/events";
+import { filterByZone, isZone, sectors, zones, type Zone } from "@/lib/sectors";
 import { forecastForDate, weatherApiUrl, type WeatherForecast, type WeatherKind, type WeatherResponse } from "@/lib/weather";
 
 const alertIcons = { "safe-point": MapPin, supplies: HeartHandshake, information: Sparkles };
 const pendingKey = "better-together:pending-alerts:v2";
+const selectedZoneKey = "better-together:selected-zone:v1";
 const cacheKey = (sessionId: EventSessionId) => `better-together:alerts:${sessionId}`;
 type FeedState = "loading" | "ready" | "cached" | "error";
 type CachedFeed = { alerts: CommunityAlert[]; fetchedAt: string };
@@ -69,12 +71,15 @@ export default function Home() {
   const [weather, setWeather] = useState<Record<string, WeatherForecast>>({});
   const [weatherState, setWeatherState] = useState<WeatherState>("loading");
   const [darkMode, setDarkMode] = useState(false);
+  const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
+  const [requestZone, setRequestZone] = useState<Zone>(zones[0]);
 
   const selectedSession = useMemo(() => eventSessions.find((session) => session.id === selectedSessionId) ?? eventSessions[0], [selectedSessionId]);
   const phase = getSessionPhase(selectedSession, now);
   const countdown = getCountdownParts(selectedSession, now);
   const selectedWeather = weather[selectedSession.date];
   const WeatherIcon = selectedWeather ? weatherIcons[selectedWeather.kind] : CloudSun;
+  const visibleAlerts = useMemo(() => filterByZone(alerts, selectedZone), [alerts, selectedZone]);
 
   const publish = useCallback(async (input: AlertInput) => {
     const response = await fetch("/api/alerts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
@@ -135,6 +140,17 @@ export default function Home() {
       document.documentElement.dataset.theme = useDark ? "dark" : "light";
     }, 0);
     return () => window.clearTimeout(restoreTheme);
+  }, []);
+
+  useEffect(() => {
+    const restoreZone = window.setTimeout(() => {
+      const savedZone = localStorage.getItem(selectedZoneKey);
+      if (isZone(savedZone)) {
+        setSelectedZone(savedZone);
+        setRequestZone(savedZone);
+      }
+    }, 0);
+    return () => window.clearTimeout(restoreZone);
   }, []);
 
   useEffect(() => {
@@ -231,7 +247,7 @@ export default function Home() {
       category: selectedCategory,
       title: String(form.get("title") || "").trim(),
       details: String(form.get("details") || "").trim(),
-      zone: String(form.get("zone") || zones[0]) as AlertInput["zone"],
+      zone: requestZone,
       connectivity: online ? "online" : "queued",
       website: String(form.get("website") || ""),
     };
@@ -283,8 +299,19 @@ export default function Home() {
 
   function startRequest(category: AlertInput["category"]) {
     setSelectedCategory(category);
+    if (selectedZone) setRequestZone(selectedZone);
     setActiveSection("help");
     setOpen(true);
+  }
+
+  function chooseZone(zone: Zone | null) {
+    setSelectedZone(zone);
+    if (zone) {
+      setRequestZone(zone);
+      localStorage.setItem(selectedZoneKey, zone);
+    } else {
+      localStorage.removeItem(selectedZoneKey);
+    }
   }
 
   function toggleTheme() {
@@ -352,7 +379,7 @@ export default function Home() {
           <TabsContent value="home" className="space-y-3">
             <div className="community-status">
               <span className={`signal-dot ${online ? "online" : "offline"}`} aria-hidden="true" />
-              <div><p className="eyebrow">Comunidad · {selectedSession.shortDate}</p><h2>{feedState === "loading" ? "Buscando actividad reciente" : alerts.length ? `${alerts.length} solicitud${alerts.length === 1 ? "" : "es"} activa${alerts.length === 1 ? "" : "s"}` : "Todo tranquilo por ahora"}</h2></div>
+              <div><p className="eyebrow">Comunidad · {selectedSession.shortDate}</p><h2>{feedState === "loading" ? "Buscando actividad reciente" : visibleAlerts.length ? `${visibleAlerts.length} solicitud${visibleAlerts.length === 1 ? "" : "es"} ${selectedZone ? `en ${selectedZone}` : "activa" + (visibleAlerts.length === 1 ? "" : "s")}` : selectedZone ? `Sin solicitudes en ${selectedZone}` : "Todo tranquilo por ahora"}</h2></div>
               <button type="button" onClick={() => setActiveSection("help")}>Ver comunidad</button>
             </div>
             <div className="section-heading"><div><p>Antes de salir</p><h2>Lo esencial para llegar</h2></div><span>Información revisada</span></div>
@@ -387,13 +414,34 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="help" className="space-y-3">
-            <div className="section-heading"><div><p>Ayuda cotidiana · En prueba</p><h2>Solicitudes de {selectedSession.shortDate}</h2></div><span>{alerts.length} activas</span></div>
+            <div className="section-heading"><div><p>Ayuda cotidiana · En prueba</p><h2>Solicitudes de {selectedSession.shortDate}</h2></div><span>{visibleAlerts.length} visibles</span></div>
+            <section className="sector-panel" aria-labelledby="sector-map-title">
+              <div className="sector-panel-heading">
+                <span className="sector-heading-icon"><MapIcon aria-hidden="true" /></span>
+                <div><p className="eyebrow">Mapa sin GPS</p><h3 id="sector-map-title">¿En qué sector estás?</h3><p>Elige una zona para ver avisos cercanos. Puedes cambiarla cuando quieras.</p></div>
+                <span className="privacy-chip"><ShieldCheck aria-hidden="true" /> Sin ubicación exacta</span>
+              </div>
+              <div className="sector-map" aria-label="Sectores aproximados del recinto">
+                {sectors.map((sector) => {
+                  const selected = selectedZone === sector.id;
+                  const activeCount = alerts.filter((alert) => alert.zone === sector.id).length;
+                  return <button key={sector.id} className={`sector-button sector-${sector.position} ${selected ? "selected" : ""}`} type="button" aria-pressed={selected} aria-label={`${sector.id}. ${sector.description}${activeCount ? `. ${activeCount} solicitudes activas` : ". Sin solicitudes activas"}`} onClick={() => chooseZone(sector.id)}>
+                    <span>{sector.shortLabel}</span>{activeCount > 0 && <strong aria-hidden="true">{activeCount}</strong>}
+                  </button>;
+                })}
+                <span className="sector-stage" aria-hidden="true">Escenario</span>
+              </div>
+              <div className="sector-selection">
+                <div><strong>{selectedZone ? `Viendo ${selectedZone}` : "Viendo todos los sectores"}</strong><p>La selección queda guardada únicamente en este dispositivo.</p></div>
+                <button className="all-zones-button" type="button" aria-pressed={selectedZone === null} onClick={() => chooseZone(null)}>Ver todos</button>
+              </div>
+            </section>
             <div className="safety-note"><ShieldCheck aria-hidden="true" /><p><strong>Solo necesidades cotidianas.</strong> Para una urgencia, una persona perdida, riesgo médico o de seguridad, acude al personal del recinto o a los canales oficiales.</p></div>
             {!online && <div className="offline-note"><WifiOff aria-hidden="true" /><p>{feedState === "cached" ? "Ves contenido guardado en este dispositivo. Puede estar desactualizado." : "Sin una carga anterior no podemos mostrar solicitudes. Puedes guardar una nueva para intentar enviarla al recuperar señal."}</p></div>}
             {feedState === "loading" && <div className="empty-state"><RefreshCw className="animate-spin" /><h3>Cargando solicitudes</h3><p>Consultando esta sesión.</p></div>}
             {feedState === "error" && alerts.length === 0 && <div className="empty-state"><WifiOff /><h3>No pudimos cargar las solicitudes</h3><p>No mostraremos ejemplos como si fueran actividad real.</p><Button variant="secondary" onClick={() => void loadAlerts(selectedSessionId)}>Reintentar</Button></div>}
-            {feedState !== "loading" && feedState !== "error" && alerts.length === 0 && <div className="empty-state"><ShieldCheck /><h3>No hay solicitudes activas</h3><p>Este estado es real para la sesión seleccionada.</p></div>}
-            {alerts.map((alert) => {
+            {feedState !== "loading" && feedState !== "error" && visibleAlerts.length === 0 && <div className="empty-state"><ShieldCheck /><h3>{selectedZone ? `No hay solicitudes en ${selectedZone}` : "No hay solicitudes activas"}</h3><p>{selectedZone ? "Puedes revisar todos los sectores o publicar una solicitud para esta zona." : "Este estado es real para la sesión seleccionada."}</p></div>}
+            {visibleAlerts.map((alert) => {
               const Icon = alertIcons[alert.category];
               const pending = alert.id.startsWith("pending-");
               return <article className="alert-card" key={alert.id}><div className="alert-icon"><Icon aria-hidden="true" /></div><div className="min-w-0 flex-1">
@@ -416,7 +464,7 @@ export default function Home() {
                   <div className="grid gap-2"><Label htmlFor="alias">Alias anónimo</Label><Input id="alias" name="alias" maxLength={24} placeholder="Ej. PurpleMoon" required autoComplete="off" /></div>
                   <div className="grid gap-2"><Label htmlFor="title">¿Qué necesitas compartir?</Label><Input id="title" name="title" maxLength={80} placeholder="Un mensaje corto y claro" required /></div>
                   <div className="grid gap-2"><Label htmlFor="details">Detalle opcional</Label><Textarea id="details" name="details" maxLength={240} placeholder="Agrega solo lo necesario" rows={3} /></div>
-                  <div className="grid gap-2"><Label htmlFor="zone">Zona aproximada</Label><Select name="zone" defaultValue={zones[0]}><SelectTrigger id="zone" className="h-11 w-full"><SelectValue /></SelectTrigger><SelectContent>{zones.map((zone) => <SelectItem key={zone} value={zone}>{zone}</SelectItem>)}</SelectContent></Select></div>
+                  <div className="grid gap-2"><Label htmlFor="zone">Zona aproximada</Label><Select name="zone" value={requestZone} onValueChange={(value) => { if (isZone(value)) setRequestZone(value); }}><SelectTrigger id="zone" className="h-11 w-full"><SelectValue /></SelectTrigger><SelectContent>{zones.map((zone) => <SelectItem key={zone} value={zone}>{zone}</SelectItem>)}</SelectContent></Select><p className="text-xs text-muted-foreground">Publicamos solo el nombre del sector, nunca coordenadas.</p></div>
                   <input className="hidden" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
                   <Button className="h-12 w-full text-base font-bold" type="submit" disabled={submitting}>{submitting ? "Guardando…" : online ? "Publicar por 2 horas" : "Guardar para intentar después"}</Button>
                 </form>

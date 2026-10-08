@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { eventSessionIds } from "@/lib/events";
+import { zones } from "@/lib/sectors";
 
 export const alertCategories = [
   "emergency",
@@ -11,14 +12,7 @@ export const alertCategories = [
   "information",
 ] as const;
 
-export const zones = [
-  "Acceso Norte",
-  "Acceso Oriente",
-  "Nivel 1",
-  "Nivel 2",
-  "Cancha",
-  "Punto de encuentro",
-] as const;
+export { zones } from "@/lib/sectors";
 
 export const categoryLabels: Record<(typeof alertCategories)[number], string> = {
   emergency: "Emergencia",

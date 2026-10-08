@@ -97,6 +97,32 @@ button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visibl
 .more-details { border: 1px solid var(--border); border-radius: 1.05rem; background: rgb(255 253 248 / 75%); padding: .95rem; }
 .more-details summary { cursor: pointer; color: #4c25b2; font-weight: 800; }
 
+.sector-panel { overflow: hidden; border: 2px solid var(--ink); border-radius: 1.25rem; background: var(--paper); box-shadow: 4px 4px 0 var(--ink); }
+.sector-panel-heading { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .8rem; padding: 1rem; }
+.sector-heading-icon { display: grid; height: 44px; width: 44px; place-items: center; border-radius: .85rem; background: var(--signal); color: #fff; }
+.sector-heading-icon svg { height: 22px; width: 22px; }
+.sector-panel-heading h3 { margin-top: .1rem; font-size: 1.12rem; font-weight: 850; }
+.sector-panel-heading > div > p:last-child { margin-top: .2rem; color: var(--muted-foreground); font-size: .82rem; line-height: 1.4; }
+.privacy-chip { display: inline-flex; align-items: center; gap: .35rem; border: 1px solid #8abdaf; border-radius: 999px; background: #e1f4e9; padding: .38rem .62rem; color: #11623f; font-size: .72rem; font-weight: 800; white-space: nowrap; }
+.privacy-chip svg { height: 14px; width: 14px; }
+.sector-map { display: grid; grid-template-areas: ". north meeting" "level-two level-two east" "level-one field east" ". stage ."; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; min-height: 270px; margin: 0 1rem; border: 1px solid #bdb4cf; border-radius: 1rem; background: linear-gradient(rgb(109 63 229 / 7%) 1px, transparent 1px), linear-gradient(90deg, rgb(109 63 229 / 7%) 1px, transparent 1px), #f1ede5; background-size: 18px 18px; padding: .8rem; }
+.sector-button { position: relative; display: flex; min-height: 54px; align-items: center; justify-content: center; gap: .35rem; border: 1px solid var(--ink); border-radius: .75rem; background: var(--paper); color: var(--foreground); font-size: .78rem; font-weight: 800; line-height: 1.15; text-align: center; box-shadow: 2px 2px 0 var(--ink); transition: transform .14s ease, box-shadow .14s ease, background .14s ease; }
+.sector-button:hover, .sector-button:focus-visible { background: #eee8ff; box-shadow: 1px 1px 0 var(--ink); transform: translate(1px, 1px); }
+.sector-button.selected { background: var(--signal); color: #fff; }
+.sector-button strong { display: grid; min-height: 22px; min-width: 22px; place-items: center; border-radius: 999px; background: var(--ink); color: var(--paper); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .7rem; }
+.sector-north { grid-area: north; }
+.sector-east { grid-area: east; }
+.sector-level-one { grid-area: level-one; }
+.sector-level-two { grid-area: level-two; }
+.sector-field { grid-area: field; }
+.sector-meeting { grid-area: meeting; }
+.sector-stage { grid-area: stage; align-self: center; border-radius: .35rem .35rem 1rem 1rem; background: var(--ink); padding: .42rem; color: var(--paper); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .68rem; font-weight: 900; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
+.sector-selection { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 1rem 1rem; }
+.sector-selection strong { font-size: .9rem; }
+.sector-selection p { margin-top: .12rem; color: var(--muted-foreground); font-size: .75rem; }
+.all-zones-button { min-height: 42px; flex: none; border: 1px solid var(--ink); border-radius: 999px; background: var(--paper); padding: .55rem .85rem; font-size: .78rem; font-weight: 800; }
+.all-zones-button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+
 .content-card, .alert-card { border: 1px solid var(--border); border-radius: 1.05rem; background: var(--paper); padding: 1rem; box-shadow: 0 8px 25px rgb(24 21 30 / 6%); }
 .content-card h3 { font-size: 1.08rem; font-weight: 800; line-height: 1.35; }
 .content-card p, .alert-card p { color: var(--muted-foreground); }
@@ -152,6 +178,9 @@ button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visibl
 [data-theme="dark"] .section-tabs { background: rgb(26 25 33 / 92%); }
 [data-theme="dark"] .section-tabs button[data-state="active"] { background: #f8f6fb; color: #18151e; }
 [data-theme="dark"] .community-status, [data-theme="dark"] .content-card, [data-theme="dark"] .alert-card, [data-theme="dark"] .category-choice { background: var(--paper); }
+[data-theme="dark"] .sector-panel { box-shadow: 4px 4px 0 var(--shadow); }
+[data-theme="dark"] .sector-map { border-color: #514964; background: linear-gradient(rgb(167 139 250 / 7%) 1px, transparent 1px), linear-gradient(90deg, rgb(167 139 250 / 7%) 1px, transparent 1px), #232129; background-size: 18px 18px; }
+[data-theme="dark"] .privacy-chip { border-color: #286b51; background: #17382a; color: #a7e7c8; }
 [data-theme="dark"] .more-details, [data-theme="dark"] .app-note { background: rgb(26 25 33 / 80%); }
 [data-theme="dark"] .request-dialog input, [data-theme="dark"] .request-dialog textarea, [data-theme="dark"] .request-dialog button[role="combobox"] { background: #24222b; }
 
@@ -165,6 +194,8 @@ button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visibl
   .section-heading > span { white-space: normal; text-align: right; }
   .quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .quick-actions-heading { grid-column: 1 / -1; }
+  .sector-panel-heading { grid-template-columns: auto minmax(0, 1fr); }
+  .privacy-chip { grid-column: 2; justify-self: start; }
 }
 @media (max-width: 420px) {
   .session-button { min-height: 68px; font-size: .9rem; }
@@ -179,5 +210,8 @@ button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visibl
   .community-status button { grid-column: 2; justify-self: start; }
   .connection-pill span { position: absolute; height: 1px; width: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .connection-pill { height: 38px; width: 38px; justify-content: center; padding: 0; }
+  .sector-map { grid-template-areas: "north meeting" "level-two east" "level-one east" "field field" "stage stage"; grid-template-columns: repeat(2, minmax(0, 1fr)); min-height: 330px; }
+  .sector-selection { align-items: flex-start; flex-direction: column; }
+  .all-zones-button { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
