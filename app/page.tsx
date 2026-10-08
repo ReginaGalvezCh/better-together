@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TicketSetup, type TicketPreference } from "@/components/ticket-setup";
 import { QuickAccessDock } from "@/components/quick-access-dock";
+import { useConcertMoment } from "@/hooks/use-concert-moment";
+import { momentLabels, moments } from "@/lib/quick-actions";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +64,7 @@ function saveCached(sessionId: EventSessionId, alerts: CommunityAlert[]) {
 
 export default function Home() {
   const [selectedSessionId, setSelectedSessionId] = useState<EventSessionId>(() => getDefaultSession().id);
+  const { moment, selectMoment } = useConcertMoment(selectedSessionId);
   const [activeSection, setActiveSection] = useState("home");
   const [now, setNow] = useState(() => new Date());
   const [alerts, setAlerts] = useState<CommunityAlert[]>([]);
@@ -383,8 +386,16 @@ export default function Home() {
           <button type="button" onClick={() => setEditingTicket(true)}>Cambiar mi entrada</button>
         </div>
 
+        <section className="concert-controls mb-4" aria-label="Elige tus accesos rápidos">
+          <p className="eyebrow mb-2">¿En qué momento estás?</p>
+          <div className="moment-selector" role="group" aria-label="Tu momento en el concierto">
+            {moments.map((item) => <button type="button" key={item} aria-pressed={moment === item} onClick={() => selectMoment(item)}>{momentLabels[item]}</button>)}
+          </div>
+          <p className="moment-note">Tú eliges. Los accesos de abajo cambian contigo.</p>
+        </section>
+
         <div className="event-moment mb-5">
-          <div className="event-summary"><span className="phase-label">{phase}</span><h2 className="mt-2 text-2xl font-bold">{selectedSession.dateLabel}</h2><p className="mt-1 text-muted-foreground">Coliseo Central · Estadio Nacional</p></div>
+          <div className="event-summary"><span className="phase-label">Según horario · {phase}</span><h2 className="mt-2 text-2xl font-bold">{selectedSession.dateLabel}</h2><p className="mt-1 text-muted-foreground">Coliseo Central · Estadio Nacional</p></div>
           <div className="countdown" aria-label="Tiempo hasta el inicio estimado">
             {countdown.complete ? <p>La hora estimada ya pasó. Revisa las actualizaciones; esto no confirma que el show haya comenzado.</p> : <><span><strong>{countdown.days}</strong><small>días</small></span><span><strong>{countdown.hours}</strong><small>horas</small></span><span><strong>{countdown.minutes}</strong><small>min</small></span></>}
           </div>
@@ -502,7 +513,7 @@ export default function Home() {
                 </form>
               </DialogContent>
         </Dialog>
-        <QuickAccessDock key={selectedSessionId} sessionId={selectedSessionId} online={online} onMeeting={() => startRequest("safe-point")} onHelp={() => startRequest("supplies")} />
+        <QuickAccessDock key={selectedSessionId} moment={moment} online={online} onMeeting={() => startRequest("safe-point")} onHelp={() => startRequest("supplies")} />
         </>}
 
         <div className="app-note mt-5"><Info className="shrink-0 text-primary" size={19} aria-hidden="true" /><p>Better Together reúne orientación comunitaria; no reemplaza al organizador, al personal del recinto ni a los servicios de emergencia.</p></div>

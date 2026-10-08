@@ -1,10 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Car, HeartHandshake, MapPin, Navigation, ShieldCheck, Smartphone, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { actionsByMoment, arrivalUrl, isConcertMoment, momentLabels, moments, quentroUrl, returnUrl, safeMessage, uberUrl, type ConcertMoment } from "@/lib/quick-actions";
-import type { EventSessionId } from "@/lib/events";
+import { actionsByMoment, arrivalUrl, momentLabels, quentroUrl, returnUrl, safeMessage, uberUrl, type ConcertMoment } from "@/lib/quick-actions";
 
 const actionInfo = {
   arrival: { label: "Cómo llegar", icon: Navigation, href: arrivalUrl },
@@ -17,25 +16,10 @@ const actionInfo = {
   safe: { label: "Estoy a salvo", icon: ShieldCheck },
 };
 
-export function QuickAccessDock({ sessionId, online, onMeeting, onHelp }: {
-  sessionId: EventSessionId; online: boolean; onMeeting: () => void; onHelp: () => void;
+export function QuickAccessDock({ moment, online, onMeeting, onHelp }: {
+  moment: ConcertMoment; online: boolean; onMeeting: () => void; onHelp: () => void;
 }) {
-  const [moment, setMoment] = useState<ConcertMoment>("before");
   const [panel, setPanel] = useState<"ticket" | "prepare" | "safe" | null>(null);
-  const storageKey = `better-together:moment:${sessionId}`;
-  useEffect(() => {
-    const restore = window.setTimeout(() => {
-      try {
-        const saved = localStorage.getItem(storageKey);
-        if (isConcertMoment(saved)) setMoment(saved);
-      } catch { /* Also works without persistent storage. */ }
-    }, 0);
-    return () => window.clearTimeout(restore);
-  }, [storageKey]);
-  function selectMoment(next: ConcertMoment) {
-    setMoment(next);
-    try { localStorage.setItem(storageKey, next); } catch { /* Session-only preference. */ }
-  }
   async function shareSafe() {
     try { await navigator.share({ text: safeMessage }); }
     catch (error) { if ((error as Error).name !== "AbortError") toast.info("No pudimos abrir compartir. Puedes copiar el mensaje."); }
@@ -46,9 +30,6 @@ export function QuickAccessDock({ sessionId, online, onMeeting, onHelp }: {
   }
   return <>
     <nav className="quick-dock" aria-label="Accesos rápidos del concierto"><div className="quick-dock-inner">
-      <div className="moment-selector" role="group" aria-label="Tu momento en el concierto">
-        {moments.map((item) => <button type="button" key={item} aria-pressed={moment === item} onClick={() => selectMoment(item)}>{momentLabels[item]}</button>)}
-      </div>
       <div className="dock-actions">{actionsByMoment[moment].map((action) => {
         const info = actionInfo[action]; const Icon = info.icon;
         const contents = <><Icon size={21} aria-hidden="true" /><span>{info.label}</span></>;
@@ -60,7 +41,7 @@ export function QuickAccessDock({ sessionId, online, onMeeting, onHelp }: {
             else if (action === "ticket" || action === "prepare" || action === "safe") setPanel(action);
           }}>{contents}</button>;
       })}</div>
-      <p className="dock-note">{online ? "Elige tu momento · Servicios externos pueden necesitar señal" : "Sin señal · Tu guía sigue aquí; servicios externos pueden no abrir"}</p>
+      <p className="dock-note">{momentLabels[moment]} · {online ? "Servicios externos pueden necesitar señal" : "Sin señal; servicios externos pueden no abrir"}</p>
     </div></nav>
     <Dialog open={panel !== null} onOpenChange={(open) => { if (!open) setPanel(null); }}>
       <DialogContent className="max-h-[85dvh] overflow-y-auto">
