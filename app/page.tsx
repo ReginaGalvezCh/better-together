@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarDays, Cloud, CloudFog, CloudLightning, CloudRain, CloudSun, Clock3, Droplets, ExternalLink, HeartHandshake, Info, MapPin, Newspaper, RefreshCw, ShieldCheck, Snowflake, Sparkles, Sun, TicketCheck, Wifi, WifiOff } from "lucide-react";
+import { CalendarDays, Cloud, CloudFog, CloudLightning, CloudRain, CloudSun, Clock3, Droplets, ExternalLink, HeartHandshake, Info, MapPin, Newspaper, RefreshCw, ShieldCheck, Snowflake, Sparkles, Sun, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -57,7 +57,7 @@ function saveCached(sessionId: EventSessionId, alerts: CommunityAlert[]) {
 
 export default function Home() {
   const [selectedSessionId, setSelectedSessionId] = useState<EventSessionId>(() => getDefaultSession().id);
-  const [activeSection, setActiveSection] = useState("info");
+  const [activeSection, setActiveSection] = useState("home");
   const [now, setNow] = useState(() => new Date());
   const [alerts, setAlerts] = useState<CommunityAlert[]>([]);
   const [feedState, setFeedState] = useState<FeedState>("loading");
@@ -271,6 +271,12 @@ export default function Home() {
     } finally { setSubmitting(false); }
   }
 
+  function startRequest(category: AlertInput["category"]) {
+    setSelectedCategory(category);
+    setActiveSection("help");
+    setOpen(true);
+  }
+
   return (
     <main className="min-h-screen pb-10">
       <header className="sticky top-0 z-30 border-b border-white/8 bg-[var(--background)]/90 backdrop-blur-xl">
@@ -286,7 +292,7 @@ export default function Home() {
       </header>
 
       <section className="mx-auto max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
-        <div className="mb-4"><p className="eyebrow mb-1">BTS WORLD TOUR ARIRANG · Santiago</p><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">¿Qué día vas?</h1></div>
+        <div className="mb-4"><p className="eyebrow mb-1">BTS WORLD TOUR ARIRANG · Santiago</p><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Tu concierto, a mano</h1></div>
         <div className="session-strip mb-4" aria-label="Sesiones del concierto">
           {eventSessions.map((session) => {
             const selected = session.id === selectedSessionId;
@@ -310,18 +316,43 @@ export default function Home() {
           <p className="event-time"><Clock3 size={16} aria-hidden="true" /> Inicio estimado · 20:00</p>
         </div>
 
+        <section className="quick-actions mb-5" aria-labelledby="quick-actions-title">
+          <div className="quick-actions-heading"><p className="eyebrow">Acciones rápidas</p><h2 id="quick-actions-title">¿Qué necesitas ahora?</h2></div>
+          <button className="primary-action" type="button" onClick={() => startRequest("supplies")}><span className="action-icon"><HeartHandshake aria-hidden="true" /></span><span><strong>Necesito ayuda</strong><small>Agua, cargador o artículos básicos</small></span></button>
+          <button className="primary-action meeting" type="button" onClick={() => startRequest("safe-point")}><span className="action-icon"><MapPin aria-hidden="true" /></span><span><strong>Punto de encuentro</strong><small>Comparte una zona fácil de reconocer</small></span></button>
+        </section>
+
         <Tabs value={activeSection} onValueChange={setActiveSection}>
           <TabsList className="section-tabs mb-5 h-auto w-full" aria-label="Secciones del evento">
-            <TabsTrigger value="info"><Info /> Info</TabsTrigger><TabsTrigger value="pulse"><Newspaper /> Pulse</TabsTrigger><TabsTrigger value="activities"><CalendarDays /> Actividades</TabsTrigger><TabsTrigger value="help"><HeartHandshake /> Ayuda</TabsTrigger>
+            <TabsTrigger value="home"><Info /> Inicio</TabsTrigger><TabsTrigger value="pulse"><Newspaper /> Avisos</TabsTrigger><TabsTrigger value="help"><HeartHandshake /> Ayuda</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="info" className="space-y-3">
-            <div className="section-heading"><div><p>Información práctica</p><h2>Lo esencial para llegar</h2></div><span>Revisado y enlazado</span></div>
-            {informationItems.map((item) => <article className="content-card" key={item.id}>
+          <TabsContent value="home" className="space-y-3">
+            <div className="community-status">
+              <span className={`signal-dot ${online ? "online" : "offline"}`} aria-hidden="true" />
+              <div><p className="eyebrow">Comunidad · {selectedSession.shortDate}</p><h2>{feedState === "loading" ? "Buscando actividad reciente" : alerts.length ? `${alerts.length} solicitud${alerts.length === 1 ? "" : "es"} activa${alerts.length === 1 ? "" : "s"}` : "Todo tranquilo por ahora"}</h2></div>
+              <button type="button" onClick={() => setActiveSection("help")}>Ver comunidad</button>
+            </div>
+            <div className="section-heading"><div><p>Antes de salir</p><h2>Lo esencial para llegar</h2></div><span>Información revisada</span></div>
+            {informationItems.slice(0, 2).map((item) => <article className="content-card essential-card" key={item.id}>
               <div className="flex flex-wrap items-start justify-between gap-2"><h3>{item.title}</h3><span className={`status-chip status-${item.status.toLowerCase()}`}>{item.status}</span></div>
               <p className="mt-2 leading-relaxed text-violet-50/80">{item.value}</p>
               <div className="source-row"><span>{item.scope} · Revisado {item.reviewedAt}</span><a href={item.sourceUrl} target="_blank" rel="noreferrer">{item.sourceLabel}<ExternalLink /></a></div>
             </article>)}
+            <details className="more-details">
+              <summary>Ver horarios, accesos y actividades</summary>
+              <div className="space-y-3 pt-3">
+                {informationItems.slice(2).map((item) => <article className="content-card" key={item.id}>
+                  <div className="flex flex-wrap items-start justify-between gap-2"><h3>{item.title}</h3><span className={`status-chip status-${item.status.toLowerCase()}`}>{item.status}</span></div>
+                  <p className="mt-2 leading-relaxed text-violet-50/80">{item.value}</p>
+                  <div className="source-row"><span>{item.scope} · Revisado {item.reviewedAt}</span><a href={item.sourceUrl} target="_blank" rel="noreferrer">{item.sourceLabel}<ExternalLink /></a></div>
+                </article>)}
+                {activities.map((activity) => <article className="content-card" key={activity.id}>
+                  <div className="flex gap-3"><span className="content-icon"><CalendarDays /></span><div><h3>{activity.title}</h3><p className="mt-2 font-medium text-violet-100">{activity.schedule}</p><p className="mt-1 text-violet-50/70">{activity.location}</p></div></div>
+                  <p className="mt-4 leading-relaxed text-violet-50/75">{activity.note}</p><div className="source-row"><span>Revisado {activity.reviewedAt}</span><a href={activity.sourceUrl} target="_blank" rel="noreferrer">{activity.sourceLabel}<ExternalLink /></a></div>
+                </article>)}
+              </div>
+            </details>
           </TabsContent>
 
           <TabsContent value="pulse" className="space-y-3">
@@ -330,14 +361,6 @@ export default function Home() {
               <div className="flex items-center justify-between gap-3 text-sm"><span className="font-semibold text-violet-200">{item.source}</span><span className="status-chip">{item.kind}</span></div>
               <h3 className="mt-3">{item.title}</h3><p className="mt-2 leading-relaxed text-violet-50/75">{item.summary}</p>
               <div className="source-row"><span>{item.publishedLabel}</span><a href={item.url} target="_blank" rel="noreferrer">Abrir fuente<ExternalLink /></a></div>
-            </article>)}
-          </TabsContent>
-
-          <TabsContent value="activities" className="space-y-3">
-            <div className="section-heading"><div><p>Para sumar al plan</p><h2>Actividades antes y después</h2></div><span>Información oficial</span></div>
-            {activities.map((activity) => <article className="content-card" key={activity.id}>
-              <div className="flex gap-3"><span className="content-icon"><TicketCheck /></span><div><h3>{activity.title}</h3><p className="mt-2 font-medium text-violet-100">{activity.schedule}</p><p className="mt-1 text-violet-50/70">{activity.location}</p></div></div>
-              <p className="mt-4 leading-relaxed text-violet-50/75">{activity.note}</p><div className="source-row"><span>Revisado {activity.reviewedAt}</span><a href={activity.sourceUrl} target="_blank" rel="noreferrer">{activity.sourceLabel}<ExternalLink /></a></div>
             </article>)}
           </TabsContent>
 
@@ -359,9 +382,12 @@ export default function Home() {
             })}
             {lastUpdatedAt && <p className="text-center text-sm text-violet-100/50">Última carga: {new Date(lastUpdatedAt).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}</p>}
 
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger render={<Button className="mt-2 h-14 w-full rounded-2xl text-base font-bold" />}><HeartHandshake /> Crear solicitud para {selectedSession.shortDate}</DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[#171a24] text-white sm:max-w-lg">
+            <Button className="mt-2 h-14 w-full rounded-2xl text-base font-bold" onClick={() => setOpen(true)}><HeartHandshake /> Crear solicitud para {selectedSession.shortDate}</Button>
+          </TabsContent>
+        </Tabs>
+
+        <Dialog open={open} onOpenChange={setOpen}>
+              <DialogContent className="request-dialog max-h-[90vh] overflow-y-auto sm:max-w-lg">
                 <DialogHeader><DialogTitle>Crear solicitud cotidiana</DialogTitle><DialogDescription className="text-violet-200/70">Se publicará solo en {selectedSession.dateLabel}. No compartas nombres reales, teléfonos ni ubicaciones exactas.</DialogDescription></DialogHeader>
                 <form className="space-y-4" onSubmit={handleSubmit}>
                   <div><Label className="mb-2">Tipo de solicitud</Label><div className="grid grid-cols-3 gap-2">{enabledAlertCategories.map((category) => <button key={category} className={`category-choice ${selectedCategory === category ? "selected" : ""}`} type="button" onClick={() => setSelectedCategory(category)}>{categoryLabels[category]}</button>)}</div></div>
@@ -373,9 +399,7 @@ export default function Home() {
                   <Button className="h-12 w-full text-base font-bold" type="submit" disabled={submitting}>{submitting ? "Guardando…" : online ? "Publicar por 2 horas" : "Guardar para intentar después"}</Button>
                 </form>
               </DialogContent>
-            </Dialog>
-          </TabsContent>
-        </Tabs>
+        </Dialog>
 
         <div className="mt-5 flex gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-muted-foreground"><Info className="shrink-0 text-violet-300" size={19} aria-hidden="true" /><p>Better Together reúne orientación comunitaria; no reemplaza al organizador, al personal del recinto ni a los servicios de emergencia.</p></div>
       </section>
