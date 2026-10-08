@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TicketSetup, type TicketPreference } from "@/components/ticket-setup";
 import { QuickAccessDock } from "@/components/quick-access-dock";
+import { FanchantReader } from "@/components/fanchant-reader";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -430,6 +431,7 @@ export default function Home() {
                 </article>)}
               </div>
             </details>
+            <FanchantReader />
           </TabsContent>
 
           <TabsContent value="pulse" className="space-y-3">
