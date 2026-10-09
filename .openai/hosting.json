@@ -1,5 +1,6 @@
 {
   "d1": "DB",
   "r2": null,
-  "project_id": "appgprj_6ac500c71c8481918f973dbfda71c083"
+  "project_id": "appgprj_6ac500c71c8481918f973dbfda71c083",
+  "capabilities": ["mcp"]
 }

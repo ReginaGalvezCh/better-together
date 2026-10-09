@@ -70,10 +70,10 @@ y decisiones con identificadores se eliminan a los 30 días desde su creación.
 Los registros mínimos de solicitudes vencidas se eliminan a los 30 días desde
 vencimiento cuando no quedan dependencias. Métricas se conservan hasta 30 días.
 `DATA_RETENTION_ENABLED=false` por defecto: no se ha borrado información actual.
-Con valor exacto `true`, la limpieza transaccional corre cuando una moderadora
-autorizada actualiza el panel. No es un servicio programado: sin uso del panel
-no ejecuta limpieza. Hay que activar y comprobar su frecuencia antes de publicar,
-o incorporar un trabajo programado fiable para cumplir los plazos sin presencia humana.
+Actualizar el panel no elimina datos. La operación registrada del agente ejecuta
+la limpieza únicamente al terminar correctamente un recorrido y con ambos controles
+del servidor habilitados. La programación y su conexión aún deben verificarse antes
+de activar estas funciones.
 
 Lista de activación: verificar cuenta real → configurar secret y allowlist en Sites
 → aplicar migraciones en publicación controlada → verificar permisos, denuncias,
@@ -98,12 +98,47 @@ Better Together complementa la coordinación comunitaria; no reemplaza al person
 
 Cuando se habilite, vuelve a consultar los datos y solo rechaza solicitudes pendientes u oculta solicitudes activas con los patrones de datos personales existentes. No aprueba contenido ni actúa por cantidad de denuncias. Otros indicios permanecen en la cola humana. Cada decisión usa la transacción y control de revisión del panel, con actor `agent:conservative-triage-v1:<cuenta-iniciadora>`; los reintentos no duplican decisiones y una revisión humana concurrente no se sobrescribe. Las reglas pueden tener falsos positivos y no detectan todo el odio, violencia o desinformación.
 
-La limpieza requiere además `DATA_RETENTION_ENABLED=true`; no se ejecuta si falla una decisión del ciclo. Devuelve cantidades realmente modificadas sin copiar contenido. No se han habilitado estos controles en producción. La limpieza existente del panel sigue teniendo su propio control de retención.
+La limpieza requiere además `DATA_RETENTION_ENABLED=true`; no se ejecuta si falla una decisión del ciclo. Devuelve cantidades realmente modificadas sin copiar contenido. No se han habilitado estos controles en producción. Leer el panel no inicia limpieza.
 
-**Límites operativos:** máximo 50 solicitudes por ciclo, muestra parcial explícita; todavía faltan recorrido completo de la cola, registro de ejecuciones/fallos y conexión programada autenticada. Este endpoint de navegador no es un acceso desatendido ni un moderador permanente. No crear una programación que prometa cobertura completa hasta resolver esos puntos. Las ramas #11/#12 son la base de este incremento; la corrección de verificación de cuenta #13 debe conservarse al integrarlas.
+El endpoint de navegador conserva una simulación/muestra de hasta 50 solicitudes.
+La operación MCP descrita abajo añade el recorrido durable completo. Ningún endpoint
+por sí solo establece una programación o promete moderación permanente.
 
 La rama del agente añade `POST /api/moderation/agent-preview`, protegido por la misma cuenta moderadora y origen del panel. Recibe únicamente `{}` y devuelve códigos de revisión, identificadores y cantidades de limpieza; nunca copia los textos a la respuesta. Examina hasta 50 solicitudes vigentes, priorizando denuncias y solicitudes pendientes, e indica si la muestra es incompleta.
 
 Es una clasificación conservadora por reglas, **no** un modelo semántico ni un verificador de noticias. Datos personales, indicios de seguridad, promoción y denuncias requieren revisión humana; no hay aprobación automática. La simulación solo consulta: no publica, oculta, registra decisiones ni borra datos, incluso al reintentar. Calcula la limpieza de texto 7 días después del vencimiento y de auditoría/denuncias a los 30 días. No representa vigilancia permanente.
 
 Siguiente incremento: conectar una ejecución protegida y programada, verificar la identidad de Regina y probar acciones auditadas antes de habilitarla. No hay programación ni limpieza de producción activada por este endpoint. Esta rama se apoya en `feat/community-abuse-protection`; no debe integrarse sin su base.
+
+## Operación desatendida: conexión pendiente de verificación
+
+`POST /mcp` es un servidor HTTP sin sesión; Sites administra OAuth. La inicialización
+y el listado de herramientas no incluyen datos privados. Todas las herramientas con
+datos exigen identidad real y la misma lista `MODERATOR_USER_IDS`: un token de servicio
+sin identidad no concede acceso. No se aceptan decisiones, identidades ni controles
+de activación en los argumentos. Herramientas:
+
+- `moderation_status`: controles activos y las diez ejecuciones recientes, sin contenido.
+- `preview_moderation_cycle`: lectura sin escrituras; muestra parcial explícita.
+- `run_moderation_cycle`: procesa hasta 50 por llamada con cursor persistente por fecha/ID,
+  horizonte de recorrido y exclusión de ejecuciones concurrentes durante 120 segundos.
+  Si `hasMore` es verdadero hay que continuar; al terminar reinicia el recorrido para
+  incluir publicaciones nuevas o cambios en solicitudes ya revisadas.
+
+Una ejecución con controles desactivados registra **solo metadatos operativos** y avanza
+el cursor; no decide ni limpia. La simulación `preview_moderation_cycle` no escribe nada.
+Las ejecuciones completas, parciales, fallidas e interrumpidas quedan registradas sin
+alias, texto, correo ni mensajes internos de error. Un fallo no avanza el cursor.
+Las decisiones previas conservan su auditoría y el reintento no las duplica. Los registros
+operativos se eliminan a los 30 días únicamente cuando la retención está habilitada.
+
+Para programar: publicar sin activar → conectar el plugin privado emitido por Sites
+→ llamar a `moderation_status` con la cuenta autorizada → ejecutar un recorrido en modo
+simulación y leer su registro persistido → verificar acceso en una tarea cloud nueva
+→ crear/reutilizar programación vinculada al Site → activar moderación y comprobar
+resultado → activar retención por separado. No incluir credenciales en instrucciones
+ni cambiar la audiencia para hacer funcionar el proceso.
+
+La tarea debe permanecer en silencio sin cambios relevantes y notificar fallos o
+atención humana necesaria. Si falla la conexión/identidad, no intentar eludirla ni
+prometer cobertura. La fuente pública de Pulso ARMY es un desarrollo separado.

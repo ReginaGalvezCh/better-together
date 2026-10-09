@@ -8,6 +8,101 @@ import { receiveReport, reportHandler } from "../lib/community-reports.ts";
 import { decideRequest, moderationHandlers, type ModerationDatabase } from "../lib/moderation.ts";
 import { purgeExpiredData } from "../lib/data-retention.ts";
 import { assessCandidate, previewModerationCycle, agentPreviewHandler, runModerationCycle, agentCycleHandler } from "../lib/moderation-agent.ts";
+import { runAgentPage, agentStatus } from "../lib/agent-operations.ts";
+import { moderationMcpHandler } from "../lib/moderation-mcp.ts";
+
+test("durable traversal covers 121 items without starving later items or publishing dry-run content", async () => {
+  const { sqlite, db, close } = database();
+  try {
+    for (let i = 0; i < 121; i++) await receiveRequest({ ...input, clientRequestId: crypto.randomUUID() }, db, now);
+    const pages = [];
+    for (let i = 0; i < 3; i++) pages.push(await runAgentPage(db, "owner", {}, now, () => now));
+    assert.deepEqual(pages.map((p) => [p.inspected, p.hasMore]), [[50, true], [50, true], [21, false]]);
+    const logs = await agentStatus(db, {});
+    assert.equal(logs.runs.length, 3);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM alerts WHERE status = 'pending-review'").get()!.n, 121);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM moderation_decisions").get()!.n, 0);
+    assert.equal((await runAgentPage(db, "owner", {}, now, () => now)).inspected, 50); // next sweep wraps
+  } finally { close(); }
+});
+
+test("operations log failure without text, leave cursor unchanged and recover safely", async () => {
+  const { sqlite, db, close } = database();
+  try {
+    await receiveRequest(input, db, now);
+    sqlite.prepare("UPDATE alerts SET details = 'synthetic@example.test'").run();
+    sqlite.exec("CREATE TRIGGER fail_audit BEFORE INSERT ON moderation_decisions BEGIN SELECT RAISE(ABORT, 'private error text'); END");
+    await assert.rejects(runAgentPage(db, "owner", { execution: "true", retention: "true" }, now, () => now));
+    const failed = sqlite.prepare("SELECT * FROM agent_runs").get()!;
+    assert.equal(failed.status, "failed"); assert.equal(failed.failure_code, "cycle-failed");
+    assert.equal(JSON.stringify(failed).includes("synthetic"), false);
+    assert.equal(sqlite.prepare("SELECT cursor_id FROM agent_state").get()!.cursor_id, null);
+    sqlite.exec("DROP TRIGGER fail_audit");
+    const retry = await runAgentPage(db, "owner", { execution: "true" }, now, () => now);
+    assert.equal(retry.decisions, 1);
+    assert.equal((await runAgentPage(db, "owner", { execution: "true" }, now, () => now)).decisions, 0);
+  } finally { close(); }
+});
+
+test("leased traversal denies overlap and records an interrupted worker on recovery", async () => {
+  const { sqlite, db, close } = database();
+  try {
+    sqlite.prepare("INSERT INTO agent_state (key, lease_id, lease_until) VALUES ('moderation', 'old', ?)").run(new Date(now + 120_000).toISOString());
+    sqlite.prepare("INSERT INTO agent_runs (id, mode, status, started_at) VALUES ('old', 'dry-run', 'running', ?)").run(new Date(now).toISOString());
+    await assert.rejects(runAgentPage(db, "owner", {}, now, () => now), statusIs(409));
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM agent_runs").get()!.n, 1);
+    await runAgentPage(db, "owner", {}, now + 120_001, () => now + 120_001);
+    assert.equal(sqlite.prepare("SELECT failure_code FROM agent_runs WHERE id = 'old'").get()!.failure_code, "interrupted");
+  } finally { close(); }
+});
+
+test("MCP discovery is data-free; calls enforce actual identity and forbid activation arguments", async () => {
+  let accessed = 0;
+  const handler = (userId: string | null) => moderationMcpHandler({ identity: async () => userId ? { userId } : null,
+    allowlist: () => "owner", configuration: () => ({}), database: () => { accessed++; throw new Error("private SQL error"); } });
+  const rpc = (method: string, params: unknown = {}) => new Request("https://app.test/mcp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
+  assert.equal((await handler(null)(rpc("initialize"))).status, 200);
+  assert.equal((await handler(null)(rpc("tools/list"))).status, 200);
+  assert.equal((await handler(null)(rpc("tools/call", { name: "moderation_status" }))).status, 401);
+  assert.equal((await handler("viewer")(rpc("tools/call", { name: "run_moderation_cycle" }))).status, 403);
+  const overrides = await handler("owner")(rpc("tools/call", { name: "run_moderation_cycle", arguments: { execution: "true" } }));
+  assert.equal(((await overrides.json()) as { error: { code: number } }).error.code, -32602);
+  assert.equal(accessed, 0);
+  const failure = await handler("owner")(rpc("tools/call", { name: "moderation_status" }));
+  assert.equal(failure.status, 503); assert.equal((await failure.text()).includes("private SQL"), false);
+});
+
+test("traversal defers newer arrivals to the next sweep and cleans only with both flags", async () => {
+  const { sqlite, db, close } = database();
+  try {
+    for (let i = 0; i < 51; i++) await receiveRequest({ ...input, clientRequestId: crypto.randomUUID() }, db, now);
+    const old = now - 8 * 86_400_000;
+    await receiveRequest({ ...input, clientRequestId: crypto.randomUUID(), createdAt: new Date(old).toISOString() }, db, old);
+    assert.equal((await runAgentPage(db, "owner", { execution: "true", retention: "true" }, now, () => now)).cleanupPerformed, false);
+    await receiveRequest({ ...input, clientRequestId: crypto.randomUUID(), createdAt: new Date(now + 1).toISOString() }, db, now + 1);
+    const end = await runAgentPage(db, "owner", { retention: "true" }, now + 1, () => now + 1);
+    assert.equal(end.inspected, 1); assert.equal(end.cleanupPerformed, false);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM alerts WHERE alias = 'Retirada'").get()!.n, 0);
+    const first = await runAgentPage(db, "owner", { execution: "true", retention: "true" }, now + 2, () => now + 2);
+    const last = await runAgentPage(db, "owner", { execution: "true", retention: "true" }, now + 2, () => now + 2);
+    assert.equal(first.inspected + last.inspected, 52); assert.equal(last.cleanupPerformed, true);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM alerts WHERE alias = 'Retirada'").get()!.n, 1);
+  } finally { close(); }
+});
+
+test("partial decision failure is counted and retry does not duplicate prior decisions", async () => {
+  const { sqlite, db, close } = database();
+  try {
+    for (let i = 0; i < 2; i++) await receiveRequest({ ...input, clientRequestId: crypto.randomUUID() }, db, now);
+    sqlite.prepare("UPDATE alerts SET details = 'synthetic@example.test'").run();
+    sqlite.exec("CREATE TRIGGER fail_second BEFORE INSERT ON moderation_decisions WHEN (SELECT COUNT(*) FROM moderation_decisions) = 1 BEGIN SELECT RAISE(ABORT, 'private failure'); END");
+    await assert.rejects(runAgentPage(db, "owner", { execution: "true" }, now, () => now));
+    assert.equal(sqlite.prepare("SELECT decisions FROM agent_runs").get()!.decisions, 1);
+    sqlite.exec("DROP TRIGGER fail_second");
+    assert.equal((await runAgentPage(db, "owner", { execution: "true" }, now, () => now)).decisions, 1);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM moderation_decisions").get()!.n, 2);
+  } finally { close(); }
+});
 
 test("agent execution is off unless server config is exactly true, including retention", async () => {
   const { sqlite, db, close } = database();

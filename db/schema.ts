@@ -1,5 +1,27 @@
 import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
+export const agentState = sqliteTable("agent_state", {
+  key: text("key").primaryKey(),
+  cursorCreatedAt: text("cursor_created_at"),
+  cursorId: text("cursor_id"),
+  snapshotAt: text("snapshot_at"),
+  leaseId: text("lease_id"),
+  leaseUntil: text("lease_until"),
+});
+
+// Operational metadata only: never message text, alias, email, or error text.
+export const agentRuns = sqliteTable("agent_runs", {
+  id: text("id").primaryKey(),
+  mode: text("mode").notNull(),
+  status: text("status").notNull(),
+  startedAt: text("started_at").notNull(),
+  finishedAt: text("finished_at"),
+  inspected: integer("inspected").notNull().default(0),
+  decisions: integer("decisions").notNull().default(0),
+  hasMore: integer("has_more").notNull().default(0),
+  failureCode: text("failure_code"),
+}, (table) => [index("idx_agent_runs_started_at").on(table.startedAt)]);
+
 export const alerts = sqliteTable(
   "alerts",
   {
