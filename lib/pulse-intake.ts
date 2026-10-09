@@ -45,6 +45,12 @@ export function canonicalPostUrl(platform: PulseSubmission["platform"], value: s
   } catch { return null; }
 }
 
+function postIdentity(url: string) {
+  // Instagram can expose the same shortcode through both /p/ and /reel/.
+  const parsed = new URL(url);
+  return parsed.hostname === "www.instagram.com" ? `instagram:${parsed.pathname.split("/")[2]}` : url;
+}
+
 function normalize(text: string) {
   return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
@@ -74,7 +80,7 @@ function category(text: string): PulseCandidate["category"] {
 export function collectPulseCandidates(input: unknown, now = new Date(), knownUrls: readonly string[] = []) {
   if (!Number.isFinite(now.getTime())) throw new Error("Invalid collection time");
   const batch = z.array(z.unknown()).max(100).parse(input);
-  const seen = new Set(knownUrls.flatMap((value) => (["x", "instagram", "tiktok"] as const).map((platform) => canonicalPostUrl(platform, value)).filter((url) => url !== null)));
+  const seen = new Set(knownUrls.flatMap((value) => (["x", "instagram", "tiktok"] as const).map((platform) => canonicalPostUrl(platform, value)).filter((url) => url !== null).map(postIdentity)));
   const candidates: PulseCandidate[] = [];
   const skipped = { invalid: 0, duplicate: 0, stale: 0, unrelated: 0 };
   for (const value of batch) {
@@ -83,7 +89,8 @@ export function collectPulseCandidates(input: unknown, now = new Date(), knownUr
     const post = parsed.data;
     const url = canonicalPostUrl(post.platform, post.url);
     if (!url) { skipped.invalid++; continue; }
-    if (seen.has(url)) { skipped.duplicate++; continue; }
+    const identity = postIdentity(url);
+    if (seen.has(identity)) { skipped.duplicate++; continue; }
     const age = post.publishedAt ? now.getTime() - Date.parse(post.publishedAt) : null;
     const maxAge = (post.purpose === "reference" ? 30 : 1) * 24 * 60 * 60_000;
     const validity = post.validUntil ? Date.parse(post.validUntil) : null;
@@ -93,7 +100,7 @@ export function collectPulseCandidates(input: unknown, now = new Date(), knownUr
     const text = normalize(post.text);
     if (text.trim() && !relevant(text)) { skipped.unrelated++; continue; }
     const isSensitive = sensitive(text);
-    seen.add(url);
+    seen.add(identity);
     candidates.push({
       platform: post.platform, url, sessions: post.sessions, publishedAt: post.publishedAt,
       collectedAt: now.toISOString(),

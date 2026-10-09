@@ -11,10 +11,11 @@ const searchOptions = z.object({
 });
 export type XSearchOptions = z.input<typeof searchOptions>;
 const xResponseSchema = z.object({
-  data: z.array(z.object({ id: z.string().regex(/^\d{1,19}$/), text: z.string().max(4000), created_at: z.string().datetime({ offset: true }) })).max(10).default([]),
-  meta: z.object({ next_token: z.string().optional(), newest_id: z.string().regex(/^\d{1,19}$/).optional() }).optional(),
+  data: z.array(z.object({ id: z.string().regex(/^\d{1,19}$/), text: z.string().max(4000), created_at: z.string().datetime({ offset: true }) })).max(10).optional(),
+  meta: z.object({ result_count: z.number().int().min(0).max(10).optional(), next_token: z.string().optional(), newest_id: z.string().regex(/^\d{1,19}$/).optional() }).optional(),
   errors: z.array(z.unknown()).optional(),
-});
+}).refine((payload) => payload.data !== undefined || payload.meta?.result_count === 0 || Boolean(payload.errors?.length))
+  .refine((payload) => payload.meta?.result_count === undefined || payload.meta.result_count === (payload.data?.length ?? 0));
 
 async function readBoundedJson(response: Response) {
   const reader = response.body?.getReader();
@@ -39,6 +40,7 @@ async function readBoundedJson(response: Response) {
 export async function collectFromX(options: XSearchOptions, fetcher: typeof fetch = fetch, now = new Date(), knownUrls: readonly string[] = []) {
   // Gate before token validation or any network activity.
   if (options.enabled !== true) throw new Error("X collection is disabled");
+  if (!Number.isFinite(now.getTime())) throw new Error("Invalid collection time");
   const parsed = searchOptions.safeParse(options);
   if (!parsed.success) throw new Error("Invalid X configuration");
   const config = parsed.data;
@@ -69,14 +71,16 @@ export async function collectFromX(options: XSearchOptions, fetcher: typeof fetc
   try { payload = xResponseSchema.parse(await readBoundedJson(response)); }
   catch { throw new Error("Invalid X response; batch not processed"); }
   if (payload.errors?.length) throw new Error("Partial X response; batch not processed");
-  const result = collectPulseCandidates(payload.data.map((post) => ({
+  const posts = payload.data ?? [];
+  const result = collectPulseCandidates(posts.map((post) => ({
     platform: "x", url: `https://x.com/i/web/status/${post.id}`, text: post.text,
     publishedAt: post.created_at, sessions: "all",
   })), now, knownUrls);
+  const cursor = posts.reduce<string | null>((latest, post) => latest === null || BigInt(post.id) > BigInt(latest) ? post.id : latest, config.sinceId ?? null);
   return {
-    ...result, provider: "x" as const, fetchedCount: payload.data.length,
+    ...result, provider: "x" as const, fetchedCount: posts.length,
     hasMore: Boolean(payload.meta?.next_token),
     // Never advance the cursor over an uncollected page. This MVP is a bounded sample.
-    nextSinceId: payload.meta?.next_token ? null : payload.meta?.newest_id ?? config.sinceId ?? null,
+    nextSinceId: payload.meta?.next_token ? null : cursor,
   };
 }

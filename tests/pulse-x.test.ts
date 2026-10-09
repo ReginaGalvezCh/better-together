@@ -52,3 +52,24 @@ test("rate limits and partial failures stop without retry or provider error leak
   await assert.rejects(collectFromX(config, async () => Response.json({ data: [{ id: "invalid", text: "test-secret" }] }), now), /Invalid X response/);
   await assert.rejects(collectFromX(config, async () => { throw new Error("test-secret"); }, now), /X connection failed; no automatic retry/);
 });
+
+test("invalid collection time is rejected before any request, even with a cursor", async () => {
+  let calls = 0;
+  await assert.rejects(collectFromX({ ...config, sinceId: "100" }, async () => {
+    calls++; return Response.json(payload);
+  }, new Date("invalid")), /Invalid collection time/);
+  assert.equal(calls, 0);
+});
+test("malformed empty batches fail; genuine zero-result batches preserve the cursor", async () => {
+  for (const invalid of [{}, { meta: {} }, { data: [], meta: { result_count: 1 } }]) {
+    await assert.rejects(collectFromX(config, async () => Response.json(invalid), now), /Invalid X response/);
+  }
+  const result = await collectFromX({ ...config, sinceId: "100" }, async () => Response.json({ meta: { result_count: 0 } }), now);
+  assert.equal(result.fetchedCount, 0);
+  assert.equal(result.nextSinceId, "100");
+});
+test("cursor comes from fetched IDs and cannot jump or regress with metadata", async () => {
+  const fetcher: typeof fetch = async () => Response.json({ ...payload, meta: { newest_id: "999" } });
+  assert.equal((await collectFromX(config, fetcher, now)).nextSinceId, "123");
+  assert.equal((await collectFromX({ ...config, sinceId: "200" }, fetcher, now)).nextSinceId, "200");
+});

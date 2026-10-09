@@ -19,6 +19,15 @@ test("intake deduplicates by post identity, including previous batches", () => {
   assert.equal(result.skipped.duplicate, 1);
   assert.equal(collectPulseCandidates([post], now, [post.url]).skipped.duplicate, 1);
 });
+test("Instagram deduplicates p/reel aliases while preserving the direct link", () => {
+  const reel = { platform: "instagram", url: "https://instagram.com/reel/ABC/" };
+  const alias = { ...reel, url: "https://www.instagram.com/p/ABC/?tracking=1" };
+  const result = collectPulseCandidates([reel, alias], now);
+  assert.equal(result.candidates.length, 1);
+  assert.equal(result.candidates[0].url, "https://www.instagram.com/reel/ABC/");
+  assert.equal(result.skipped.duplicate, 1);
+  assert.equal(collectPulseCandidates([reel], now, [alias.url]).skipped.duplicate, 1);
+});
 test("intake rejects old, future, unrelated and invalid submissions", () => {
   const result = collectPulseCandidates([
     { ...post, publishedAt: "2026-10-06T21:00:00Z" },
