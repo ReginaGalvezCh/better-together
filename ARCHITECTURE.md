@@ -140,8 +140,49 @@ localStorage ni una cola offline de decisiones. Una retirada se refleja al
 recargar el feed; una copia offline previamente aprobada puede quedar desactualizada
 hasta reconectar, como advierte la interfaz.
 
-Faltan denuncias, límites de frecuencia, retención/borrado y operación humana antes
-de abrir esta función al público o activar fuentes en vivo. La app continúa
+El tercer incremento añade denuncias y límites básicos, con `community_reports`
+y `write_limits` en la migración aditiva `0004_tense_firedrake.sql`. POST comunitario
+exige mismo origen, cabecera `X-BT-Community: 1` y secreto server-only
+`COMMUNITY_HMAC_KEY` válido; vacío bloquea los envíos con 503. La identidad viene
+del dispatcher y se convierte en HMAC; anónimos usan cookie firmada HttpOnly,
+SameSite=Strict y Secure en HTTPS, de 24 horas. No se guardan IP ni correos.
+Los contadores D1 usan UPSERT atómico: cinco intentos de solicitudes y diez de
+denuncias por 10 minutos/cuenta o cookie, con techo global de 1000/10 minutos.
+Son ventanas fijas, no protección completa frente a bots: borrar cookies permite
+cambiar la clave anónima. La prueba privada debe mantenerse hasta añadir defensa
+de red si se pretende abrir al público. Reintentos recibidos conservan el recibo
+genérico sin gastar otro cupo; duplicados simultáneos pueden consumir más de un
+intento pero nunca duplican mensajes. Fallos de escritura pueden consumir un intento.
+
+Denunciar solo acepta un motivo codificado, UUID de solicitud y UUID idempotente;
+solo se registra para contenido revisado vigente. No admite comentarios libres.
+Una clave pseudónima denuncia una solicitud una sola vez; ni el feed ni el recibo
+exponen claves, denuncias o revisores. Denunciar no oculta automáticamente.
+El panel prioriza el número de denuncias pendientes y tiene filtro «Solo denunciadas».
+Puede ocultar o `active → active` con acción `keep`, motivo `reviewed` y revisión
+esperada. Esta última requiere IDs privados de las denuncias vistas (hasta 50),
+resuelve solo esas y mantiene las nuevas pendientes, incluso con la misma fecha.
+Auditoría, cambio de estado y resolución corren en un único batch transaccional;
+un fallo revierte todo. La UI no guarda ni sincroniza denuncias offline.
+
+Regina será la única moderadora de la primera prueba; no está habilitada aún.
+El panel cerrado permite a cada cuenta conectada consultar solo su propio ID
+de Sites para verificarlo, sin concesión automática de roles.
+
+Retención acordada: borrar alias/título/detalles siete días después del vencimiento;
+eliminar denuncias y decisiones a los 30 días desde creación; borrar registros
+mínimos de solicitudes vencidas a los 30 días cuando no quedan dependencias, y
+métricas a los 30 días. `lib/data-retention.ts` realiza una limpieza transaccional,
+ordenando dependencias para respetar claves foráneas. Solo corre desde lecturas
+autorizadas del panel cuando `DATA_RETENTION_ENABLED` es exactamente `true`.
+Está desactivada por defecto y no se han borrado datos actuales. No hay scheduler:
+sin uso del panel no se cumplen automáticamente los plazos; antes de publicar
+debe activarse una operación fiable y verificarse. La política del servidor no
+puede eliminar copias ya descargadas en dispositivos sin conexión.
+
+Faltan configuración y verificación de la cuenta real, operación de limpieza,
+protección fuerte de abuso público y cobertura humana antes de abrir esta función
+al público o activar fuentes en vivo. La app continúa
 advirtiendo que la prueba aún no tiene atención de moderadores. No se habilitaron
 cuentas reales, no se migró remotamente y no se desplegaron los incrementos de
 moderación. Las urgencias siguen fuera del apoyo cotidiano.

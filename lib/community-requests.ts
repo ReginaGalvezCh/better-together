@@ -20,7 +20,7 @@ export class RequestValidationError extends Error {
   constructor(status: number, message: string) { super(message); this.status = status; }
 }
 
-export async function receiveRequest(body: unknown, db: RequestDatabase, now = Date.now()) {
+export async function receiveRequest(body: unknown, db: RequestDatabase, now = Date.now(), beforeInsert?: () => Promise<void>) {
   const parsed = alertInputSchema.safeParse(body);
   if (!parsed.success) throw new RequestValidationError(400, "Revisa los datos de la solicitud.");
   const input = parsed.data;
@@ -28,6 +28,11 @@ export async function receiveRequest(body: unknown, db: RequestDatabase, now = D
   const createdAt = Date.parse(input.createdAt);
   if (now - createdAt >= 7_200_000) throw new RequestValidationError(410, "La solicitud guardada ya venció.");
   if (createdAt - now > 300_000) throw new RequestValidationError(400, "La fecha no es válida.");
+  if (beforeInsert) {
+    const existing = await db.prepare("SELECT id FROM alerts WHERE client_request_id = ?").bind(input.clientRequestId).first();
+    if (existing) return { receipt: { received: true as const }, status: 200 };
+    await beforeInsert();
+  }
   // Atomic conflict handling: retries cannot duplicate or renew a request.
   // A generic receipt never discloses another person's text for a guessed ID.
   const inserted = await db.prepare(`INSERT INTO alerts

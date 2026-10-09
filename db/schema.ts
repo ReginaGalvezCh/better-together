@@ -39,6 +39,26 @@ export const moderationDecisions = sqliteTable("moderation_decisions", {
   createdAt: text("created_at").notNull(),
 }, (table) => [uniqueIndex("idx_decisions_alert_revision").on(table.alertId, table.revision)]);
 
+export const communityReports = sqliteTable("community_reports", {
+  id: text("id").primaryKey(),
+  clientReportId: text("client_report_id").notNull(),
+  alertId: text("alert_id").notNull().references(() => alerts.id),
+  actorKey: text("actor_key").notNull(),
+  reason: text("reason").notNull(),
+  createdAt: text("created_at").notNull(),
+  resolvedAt: text("resolved_at"),
+}, (table) => [
+  uniqueIndex("idx_reports_client_id").on(table.clientReportId),
+  uniqueIndex("idx_reports_alert_actor").on(table.alertId, table.actorKey),
+  index("idx_reports_alert_resolved").on(table.alertId, table.resolvedAt),
+]);
+
+export const writeLimits = sqliteTable("write_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull(),
+  expiresAt: text("expires_at").notNull(),
+}, (table) => [index("idx_write_limits_expiry").on(table.expiresAt)]);
+
 export const anonymousEvents = sqliteTable(
   "anonymous_events",
   {

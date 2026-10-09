@@ -1,6 +1,9 @@
 import { getD1 } from "@/db";
 import { eventSessionIds } from "@/lib/events";
-import { publicRequestsSql, readBoundedJson, receiveRequest, RequestValidationError } from "@/lib/community-requests";
+import { publicRequestsSql, readBoundedJson, receiveRequest } from "@/lib/community-requests";
+import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { env } from "cloudflare:workers";
+import { communityActor, communityFailure, communityHeaders, consumeWriteBudget, requireCommunityOrigin } from "@/lib/community-protection";
 
 const noStore = { "Cache-Control": "no-store" };
 
@@ -19,14 +22,16 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  let cookie: string | null = null;
   try {
+    requireCommunityOrigin(request);
+    const actor = await communityActor(request, await getChatGPTUser(), (env as unknown as { COMMUNITY_HMAC_KEY?: string }).COMMUNITY_HMAC_KEY);
+    cookie = actor.cookie;
     const body = await readBoundedJson(request);
-    const result = await receiveRequest(body, getD1());
-    return Response.json({ receipt: result.receipt }, { status: result.status, headers: noStore });
+    const db = getD1();
+    const result = await receiveRequest(body, db, Date.now(), () => consumeWriteBudget(db, actor.actorKey, "request"));
+    return Response.json({ receipt: result.receipt }, { status: result.status, headers: { ...communityHeaders, ...(cookie ? { "Set-Cookie": cookie } : {}) } });
   } catch (error) {
-    if (error instanceof RequestValidationError) {
-      return Response.json({ error: error.message }, { status: error.status, headers: noStore });
-    }
-    return Response.json({ error: "No pudimos confirmar la recepción. Intenta nuevamente." }, { status: 503, headers: noStore });
+    return communityFailure(error, cookie);
   }
 }
