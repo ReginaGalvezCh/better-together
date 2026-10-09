@@ -74,6 +74,9 @@ button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visibl
 
 .event-moment { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: center; overflow: hidden; border: 2px solid var(--ink); border-radius: 1.35rem; background: var(--paper); padding: 1.1rem; box-shadow: 5px 5px 0 var(--ink); }
 .event-moment::before { position: absolute; z-index: -1; top: -7rem; right: -4rem; height: 18rem; width: 18rem; border-radius: 50%; background: repeating-radial-gradient(circle, transparent 0 24px, rgb(109 63 229 / 9%) 25px 27px); content: ""; }
+.event-ticket-access { display: inline-flex; align-items: center; gap: .55rem; min-height: 44px; max-width: 100%; margin-top: .85rem; border: 1px solid var(--signal); border-radius: .8rem; background: var(--paper); color: var(--signal); padding: .65rem .9rem; font-size: .9rem; font-weight: 800; box-shadow: 0 3px 0 var(--signal); }
+.event-ticket-access:focus-visible { outline: 3px solid var(--ring); outline-offset: 4px; }
+.event-ticket-access:hover { background: var(--muted); }
 .phase-label { display: inline-flex; border: 1px solid rgb(109 63 229 / 28%); border-radius: 999px; background: #eee8ff; padding: .3rem .65rem; color: #4c25b2; font-size: .78rem; font-weight: 800; }
 .countdown { display: flex; gap: .5rem; }
 .countdown > span { display: grid; min-width: 58px; place-items: center; border: 1px solid var(--ink); border-radius: .8rem; background: #f6f2ff; padding: .65rem .4rem; }
