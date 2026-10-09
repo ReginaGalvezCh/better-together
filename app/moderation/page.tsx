@@ -13,6 +13,8 @@ export default async function ModerationPage() {
   try { authorizeModerator(user, moderatorIds()); }
   catch (error) { denied = error instanceof RequestValidationError ? error.message : "Moderación no disponible."; }
   return <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    {/* Native navigation intentionally bypasses the published Vinext Link/prefetch failure. */}
+    {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
     <a href="/" className="font-semibold underline">Volver a Better Together</a>
     <header className="my-7"><p className="eyebrow">ARMY se cuida · Área privada</p><h1 className="mt-2 text-3xl font-bold">Revisión de solicitudes</h1></header>
     {denied ? <section className="content-card">
