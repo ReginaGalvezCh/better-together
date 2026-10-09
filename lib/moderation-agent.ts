@@ -5,7 +5,7 @@ import { readBoundedJson, RequestValidationError } from "./community-requests.ts
 
 export const agentPolicy = "conservative-triage-v1";
 export const agentBatchSize = 50;
-type Candidate = { id: string; alias: string; title: string; details: string; revision: number; status: string; reportCount: number };
+export type Candidate = { id: string; alias: string; title: string; details: string; revision: number; status: string; reportCount: number };
 
 // Rules are hints, not semantic moderation or fact checking. User content is
 // data only: never executed, followed as instructions, or sent to a provider.
@@ -57,8 +57,17 @@ export async function runModerationCycle(db: ModerationDatabase, initiatedBy: st
   configuration: { execution?: unknown; retention?: unknown }, now = Date.now()) {
   const preview = await previewModerationCycle(db, now);
   if (configuration.execution !== "true") return preview;
+  return applyModerationAssessments(db, initiatedBy, preview, configuration.retention, now);
+}
+
+// Internal runner used by the durable traversal. No caller-supplied text or
+// recommendation can bypass the private reread and revision check below.
+export async function applyModerationAssessments(db: ModerationDatabase, initiatedBy: string,
+  preview: Pick<Awaited<ReturnType<typeof previewModerationCycle>>, "assessments" | "evaluatedAt" | "truncated">,
+  retention: unknown, now = Date.now(), beforeDecision?: () => Promise<void>) {
   const outcomes: { id: string; outcome: "hidden" | "rejected" | "changed-since-preview" | "human-review" }[] = [];
   for (const assessment of preview.assessments) {
+    await beforeDecision?.();
     if (!assessment.reasons.includes("personal-data")) {
       outcomes.push({ id: assessment.id, outcome: "human-review" });
       continue;
@@ -87,7 +96,7 @@ export async function runModerationCycle(db: ModerationDatabase, initiatedBy: st
   }
   // No cleanup on a failed moderation batch. Successful prior decisions remain
   // audited; a retry only sees remaining candidates and cannot duplicate them.
-  const cleanup = configuration.retention === "true" ? await purgeExpiredData(db, now) : null;
+  const cleanup = retention === "true" ? await purgeExpiredData(db, now) : null;
   return { mode: "apply" as const, policy: agentPolicy, evaluatedAt: preview.evaluatedAt,
     scheduled: false, truncated: preview.truncated, outcomes,
     decisions: outcomes.filter((item) => item.outcome === "hidden" || item.outcome === "rejected").length,
