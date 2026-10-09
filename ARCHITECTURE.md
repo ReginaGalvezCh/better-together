@@ -52,7 +52,36 @@ Los dos filtros públicos siguen siendo **Oficial** y **Comunidad**. Oficial req
 
 Tono acordado para la próxima capa de interfaz: cercano, breve y útil, con vocabulario familiar para ARMY sin imitar frases de creadores ni llenar cada mensaje de emojis. Ejemplos propios: «Qué se viene», «Datos para tu día», «Ver el post original», «Aún falta confirmar» y «Avísanos si cambió». Los mensajes de emergencia, privacidad, permisos y moderación conservan un tono directo. Nunca convertir un comentario, popularidad o entusiasmo en una confirmación.
 
-Orden acordado: fuentes/redes primero; luego entrada y accesos, moderación, radares con fuentes reales y música. Durante el concierto, el radar de baños, merch y comida/bebestibles distinguirá información oficial de reportes comunitarios. El semáforo debe incluir texto (poca fila/fila media/fila larga), antigüedad, zona amplia y estado sin datos; un reporte vencido pierde el color y no se muestra como disponibilidad actual. No medirá seguridad ni usará GPS preciso. Es alcance pendiente, no una función implementada.
+Orden actualizado: consolidación de correcciones y Qué llevar; moderación básica; fuentes reales de Pulso; entrada y accesos; radares con fuentes vigentes; prueba con fans; música y enlaces a fanchants. Durante el concierto, el radar de baños, merch y comida/bebestibles distinguirá información oficial de reportes comunitarios. El semáforo debe incluir texto (poca fila/fila media/fila larga), antigüedad, zona amplia y estado sin datos; un reporte vencido pierde el color y no se muestra como disponibilidad actual. No medirá seguridad ni usará GPS preciso. Es alcance pendiente, no una función implementada.
+
+### Próxima capa: moderación básica (pendiente)
+
+La rama `feat/community-moderation` parte de main consolidado por los PR #7 y
+#8. Este apartado define criterios de aceptación, no una protección ya activa.
+
+1. Todas las solicitudes, incluidas las enviadas por WebMCP y la cola offline,
+   pasan por validación del servidor antes de mostrarse. Los nuevos mensajes
+   quedan pendientes de revisión; un fallo de moderación no publica por defecto.
+2. Rechazar datos personales y ubicación precisa antes de persistirlos. El
+   triage de violencia, odio, acoso, estafas, spam y enlaces riesgosos es una
+   ayuda, no garantía de detección exhaustiva ni verificación automática de
+   verdad. La información dudosa queda para revisión humana.
+3. Aprobar, rechazar u ocultar requiere acceso de moderador comprobado en el
+   servidor. Sin acceso configurado no se habilitan acciones administrativas.
+   Los secretos nunca se envían al navegador ni se guardan en Git.
+4. Añadir denuncia de contenido y límites contra abuso sin solicitar GPS ni
+   perfiles públicos. No ocultar automáticamente por popularidad de denuncias.
+5. Los estados pendientes, ocultos, rechazados y vencidos no aparecen en el
+   feed público ni reaparecen por caché o sincronización. La interfaz distingue
+   «recibido para revisión» de «publicado».
+6. Probar estados y transiciones, rechazo de acceso no autorizado, vencimiento,
+   reintentos idempotentes y comportamiento offline con datos sintéticos. Los
+   cambios de esquema se revisan localmente antes de cualquier migración remota.
+
+El primer incremento funcional será la cola de revisión y su separación del
+feed público. Denuncias y controles de moderador se completarán después en
+commits acotados de la misma rama; no se activarán fuentes en vivo mientras
+esta protección esté pendiente. Las urgencias siguen fuera del apoyo cotidiano.
 
 ### Primera conexión propuesta: X
 
