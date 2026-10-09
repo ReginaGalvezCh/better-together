@@ -6,6 +6,18 @@ import { authorizeModerator, decideRequest, moderationHandlers, type ModerationD
 import { receiveRequest, publicRequestsSql, type RequestDatabase } from "../lib/community-requests.ts";
 
 const now = Date.parse("2026-10-09T20:00:00Z");
+
+test("protected page retains signed-in account verification without granting permission", () => {
+  const source = readFileSync(new URL("../app/moderation/page.tsx", import.meta.url), "utf8");
+  assert.match(source, /user && <details/);
+  assert.match(source, /Ver mi cuenta para verificar el acceso/);
+  assert.match(source, /\{user\.userId\}/);
+  assert.match(source, /authorizeModerator\(user, moderatorIds\(\)\)/);
+  assert.match(source, /dynamic = "force-dynamic"/);
+  // Native navigation avoids the broken published RSC Link/prefetch handler.
+  assert.match(source, /<a href="\/"[^>]*>Volver a Better Together<\/a>/);
+  assert.equal(source.includes('from "next/link"'), false);
+});
 const input = { sessionId: "santiago-2026-10-14", clientRequestId: "12345678-1234-4123-8123-123456789abc",
   createdAt: new Date(now).toISOString(), alias: "Prueba", title: "Necesito una galleta", details: "Sin datos personales",
   category: "supplies", zone: "Cancha Pacífico", connectivity: "online" };
