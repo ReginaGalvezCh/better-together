@@ -16,6 +16,8 @@ export const alerts = sqliteTable(
     createdAt: text("created_at").notNull(),
     expiresAt: text("expires_at").notNull(),
     reviewedAt: text("reviewed_at"),
+    moderationRevision: integer("moderation_revision").notNull().default(0),
+    moderationDecisionId: text("moderation_decision_id"),
   },
   (table) => [
     index("idx_alerts_status_created_at").on(table.status, table.createdAt),
@@ -24,6 +26,18 @@ export const alerts = sqliteTable(
     uniqueIndex("idx_alerts_client_request_id").on(table.clientRequestId),
   ]
 );
+
+export const moderationDecisions = sqliteTable("moderation_decisions", {
+  id: text("id").primaryKey(),
+  alertId: text("alert_id").notNull().references(() => alerts.id),
+  actorId: text("actor_id").notNull(),
+  action: text("action").notNull(),
+  reason: text("reason").notNull(),
+  fromStatus: text("from_status").notNull(),
+  toStatus: text("to_status").notNull(),
+  revision: integer("revision").notNull(),
+  createdAt: text("created_at").notNull(),
+}, (table) => [uniqueIndex("idx_decisions_alert_revision").on(table.alertId, table.revision)]);
 
 export const anonymousEvents = sqliteTable(
   "anonymous_events",
