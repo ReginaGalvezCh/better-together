@@ -90,3 +90,10 @@ integrarlas no las aplica en producción.
 ## Alcance de seguridad
 
 Better Together complementa la coordinación comunitaria; no reemplaza al personal del recinto ni a los servicios de emergencia.
+# Agente de moderación: primera capa en simulación
+
+La rama del agente añade `POST /api/moderation/agent-preview`, protegido por la misma cuenta moderadora y origen del panel. Recibe únicamente `{}` y devuelve códigos de revisión, identificadores y cantidades de limpieza; nunca copia los textos a la respuesta. Examina hasta 50 solicitudes vigentes, priorizando denuncias y solicitudes pendientes, e indica si la muestra es incompleta.
+
+Es una clasificación conservadora por reglas, **no** un modelo semántico ni un verificador de noticias. Datos personales, indicios de seguridad, promoción y denuncias requieren revisión humana; no hay aprobación automática. La simulación solo consulta: no publica, oculta, registra decisiones ni borra datos, incluso al reintentar. Calcula la limpieza de texto 7 días después del vencimiento y de auditoría/denuncias a los 30 días. No representa vigilancia permanente.
+
+Siguiente incremento: conectar una ejecución protegida y programada, verificar la identidad de Regina y probar acciones auditadas antes de habilitarla. No hay programación ni limpieza de producción activada por este endpoint. Esta rama se apoya en `feat/community-abuse-protection`; no debe integrarse sin su base.
