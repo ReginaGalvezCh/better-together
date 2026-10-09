@@ -87,7 +87,7 @@ export default function Home() {
   const countdown = getCountdownParts(selectedSession, now);
   const selectedWeather = weather[selectedSession.date];
   const WeatherIcon = selectedWeather ? weatherIcons[selectedWeather.kind] : CloudSun;
-  const visibleAlerts = useMemo(() => filterByZone(alerts, selectedZone), [alerts, selectedZone]);
+  const visibleAlerts = useMemo(() => filterByZone(alerts.filter((alert) => alert.status === "active" && Date.parse(alert.expiresAt) > now.getTime()), selectedZone), [alerts, selectedZone, now]);
 
   const publish = useCallback(async (input: AlertInput) => {
     const response = await fetch("/api/alerts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
@@ -145,7 +145,9 @@ export default function Home() {
 
   useEffect(() => {
     const restoreTheme = window.setTimeout(() => {
-      const useDark = localStorage.getItem("better-together:theme") === "dark";
+      let useDark = false;
+      try { useDark = localStorage.getItem("better-together:theme") === "dark"; }
+      catch { /* The theme remains usable without persistent storage. */ }
       setDarkMode(useDark);
       document.documentElement.dataset.theme = useDark ? "dark" : "light";
     }, 0);
@@ -354,7 +356,8 @@ export default function Home() {
     setDarkMode((current) => {
       const next = !current;
       document.documentElement.dataset.theme = next ? "dark" : "light";
-      localStorage.setItem("better-together:theme", next ? "dark" : "light");
+      try { localStorage.setItem("better-together:theme", next ? "dark" : "light"); }
+      catch { /* Keep the selected theme in memory. */ }
       return next;
     });
   }
@@ -499,7 +502,7 @@ export default function Home() {
                 </form>
               </DialogContent>
         </Dialog>
-        <QuickAccessDock key={selectedSessionId} sessionId={selectedSessionId} online={online} onMeeting={() => startRequest("safe-point")} onHelp={() => startRequest("supplies")} />
+        <QuickAccessDock sessionId={selectedSessionId} online={online} onMeeting={() => startRequest("safe-point")} onHelp={() => startRequest("supplies")} />
         </>}
 
         <div className="app-note mt-5"><Info className="shrink-0 text-primary" size={19} aria-hidden="true" /><p>Better Together reúne orientación comunitaria; no reemplaza al organizador, al personal del recinto ni a los servicios de emergencia.</p></div>
