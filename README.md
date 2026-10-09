@@ -92,6 +92,16 @@ integrarlas no las aplica en producción.
 Better Together complementa la coordinación comunitaria; no reemplaza al personal del recinto ni a los servicios de emergencia.
 # Agente de moderación: primera capa en simulación
 
+## Segundo incremento: ejecución protegida, aún sin activar
+
+`POST /api/moderation/agent-cycle` recibe únicamente `{}`, exige la cuenta moderadora y el mismo origen/cabecera del panel. Sin `MODERATION_AGENT_ENABLED=true` en el servidor devuelve una simulación sin escrituras. Las opciones del cliente no pueden activarlo ni elegir decisiones.
+
+Cuando se habilite, vuelve a consultar los datos y solo rechaza solicitudes pendientes u oculta solicitudes activas con los patrones de datos personales existentes. No aprueba contenido ni actúa por cantidad de denuncias. Otros indicios permanecen en la cola humana. Cada decisión usa la transacción y control de revisión del panel, con actor `agent:conservative-triage-v1:<cuenta-iniciadora>`; los reintentos no duplican decisiones y una revisión humana concurrente no se sobrescribe. Las reglas pueden tener falsos positivos y no detectan todo el odio, violencia o desinformación.
+
+La limpieza requiere además `DATA_RETENTION_ENABLED=true`; no se ejecuta si falla una decisión del ciclo. Devuelve cantidades realmente modificadas sin copiar contenido. No se han habilitado estos controles en producción. La limpieza existente del panel sigue teniendo su propio control de retención.
+
+**Límites operativos:** máximo 50 solicitudes por ciclo, muestra parcial explícita; todavía faltan recorrido completo de la cola, registro de ejecuciones/fallos y conexión programada autenticada. Este endpoint de navegador no es un acceso desatendido ni un moderador permanente. No crear una programación que prometa cobertura completa hasta resolver esos puntos. Las ramas #11/#12 son la base de este incremento; la corrección de verificación de cuenta #13 debe conservarse al integrarlas.
+
 La rama del agente añade `POST /api/moderation/agent-preview`, protegido por la misma cuenta moderadora y origen del panel. Recibe únicamente `{}` y devuelve códigos de revisión, identificadores y cantidades de limpieza; nunca copia los textos a la respuesta. Examina hasta 50 solicitudes vigentes, priorizando denuncias y solicitudes pendientes, e indica si la muestra es incompleta.
 
 Es una clasificación conservadora por reglas, **no** un modelo semántico ni un verificador de noticias. Datos personales, indicios de seguridad, promoción y denuncias requieren revisión humana; no hay aprobación automática. La simulación solo consulta: no publica, oculta, registra decisiones ni borra datos, incluso al reintentar. Calcula la limpieza de texto 7 días después del vencimiento y de auditoría/denuncias a los 30 días. No representa vigilancia permanente.

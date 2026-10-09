@@ -7,7 +7,98 @@ import { receiveRequest, publicRequestsSql, type RequestDatabase } from "../lib/
 import { receiveReport, reportHandler } from "../lib/community-reports.ts";
 import { decideRequest, moderationHandlers, type ModerationDatabase } from "../lib/moderation.ts";
 import { purgeExpiredData } from "../lib/data-retention.ts";
-import { assessCandidate, previewModerationCycle, agentPreviewHandler } from "../lib/moderation-agent.ts";
+import { assessCandidate, previewModerationCycle, agentPreviewHandler, runModerationCycle, agentCycleHandler } from "../lib/moderation-agent.ts";
+
+test("agent execution is off unless server config is exactly true, including retention", async () => {
+  const { sqlite, db, close } = database();
+  try {
+    await receiveRequest(input, db, now);
+    sqlite.prepare("UPDATE alerts SET details = ?").run("synthetic@example.test");
+    for (const execution of [undefined, false, true, "false", "TRUE", " true "]) {
+      const result = await runModerationCycle(db, "owner", { execution, retention: "true" }, now);
+      assert.equal(result.mode, "dry-run");
+    }
+    assert.equal(sqlite.prepare("SELECT status FROM alerts").get()!.status, "pending-review");
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM moderation_decisions").get()!.n, 0);
+  } finally { close(); }
+});
+
+test("agent rejects/hides only personal-data patterns, records distinct actor, and retries are idempotent", async () => {
+  const { sqlite, db, close } = database();
+  try {
+    await receiveRequest(input, db, now);
+    const publishedId = await approved(db);
+    sqlite.prepare("UPDATE alerts SET details = ?").run("synthetic@example.test");
+    await receiveRequest({ ...input, clientRequestId: crypto.randomUUID(), title: "Hay una emergencia" }, db, now);
+    const result = await runModerationCycle(db, "owner", { execution: "true", retention: "false" }, now);
+    assert.equal(result.mode, "apply");
+    if (result.mode !== "apply") throw new Error("Expected apply");
+    assert.equal(result.decisions, 2); assert.equal(result.cleanup, null);
+    assert.equal(sqlite.prepare("SELECT status FROM alerts WHERE id = ?").get(publishedId)!.status, "hidden");
+    assert.equal(sqlite.prepare("SELECT status FROM alerts WHERE title = ?").get("Hay una emergencia")!.status, "pending-review");
+    const decisions = sqlite.prepare("SELECT actor_id, reason, action FROM moderation_decisions WHERE actor_id LIKE 'agent:%'").all();
+    assert.equal(decisions.length, 2);
+    for (const decision of decisions) { assert.equal(decision.reason, "privacy"); assert.match(String(decision.actor_id), /^agent:conservative-triage-v1:owner$/); }
+    assert.equal(JSON.stringify(result).includes("synthetic"), false);
+    const retry = await runModerationCycle(db, "owner", { execution: "true" }, now);
+    if (retry.mode !== "apply") throw new Error("Expected apply");
+    assert.equal(retry.decisions, 0);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM moderation_decisions WHERE actor_id LIKE 'agent:%'").get()!.n, 2);
+  } finally { close(); }
+});
+
+test("human review winning the race is not overwritten by the agent", async () => {
+  const { sqlite, db, close } = database();
+  try {
+    await receiveRequest(input, db, now);
+    const id = String(sqlite.prepare("SELECT id FROM alerts").get()!.id);
+    sqlite.prepare("UPDATE alerts SET details = ?").run("synthetic@example.test");
+    let first = true;
+    const racingDb = { prepare: db.prepare, async batch(statements: Parameters<ModerationDatabase["batch"]>[0]) {
+      if (first) { first = false; await decideRequest(db, "human", { id, expectedRevision: 0, action: "approve", reason: "reviewed" }, now); }
+      return db.batch(statements);
+    } };
+    const result = await runModerationCycle(racingDb, "owner", { execution: "true" }, now);
+    if (result.mode !== "apply") throw new Error("Expected apply");
+    assert.equal(result.decisions, 0); assert.equal(result.outcomes[0].outcome, "changed-since-preview");
+    assert.equal(sqlite.prepare("SELECT status FROM alerts").get()!.status, "active");
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM moderation_decisions").get()!.n, 1);
+  } finally { close(); }
+});
+
+test("agent audit failure rolls back the decision and prevents cleanup; retry can recover", async () => {
+  const { sqlite, db, close } = database();
+  try {
+    await receiveRequest(input, db, now);
+    sqlite.prepare("UPDATE alerts SET details = ?").run("synthetic@example.test");
+    const old = now - 8 * 86_400_000;
+    await receiveRequest({ ...input, clientRequestId: crypto.randomUUID(), createdAt: new Date(old).toISOString() }, db, old);
+    sqlite.exec("CREATE TRIGGER fail_agent_audit BEFORE INSERT ON moderation_decisions BEGIN SELECT RAISE(ABORT, 'synthetic audit failure'); END");
+    await assert.rejects(runModerationCycle(db, "owner", { execution: "true", retention: "true" }, now));
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM alerts WHERE status = 'pending-review'").get()!.n, 2);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM alerts WHERE alias = 'Retirada'").get()!.n, 0);
+    sqlite.exec("DROP TRIGGER fail_agent_audit");
+    const result = await runModerationCycle(db, "owner", { execution: "true", retention: "true" }, now);
+    if (result.mode !== "apply") throw new Error("Expected apply");
+    assert.equal(result.decisions, 1); assert.equal(result.cleanup?.content, 1);
+  } finally { close(); }
+});
+
+test("agent cycle rejects role/action/activation overrides and preserves private errors", async () => {
+  let reads = 0;
+  const handler = (userId: string | null) => agentCycleHandler({ identity: async () => userId ? { userId } : null,
+    allowlist: () => "owner", configuration: () => ({ execution: "true" }), database: () => { reads++; throw new Error("private database error"); } });
+  const req = (body: unknown = {}, origin = "https://app.test") => new Request("https://app.test/api/moderation/agent-cycle", {
+    method: "POST", headers: { Origin: origin, "X-BT-Moderation": "1", "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  assert.equal((await handler(null)(req())).status, 401);
+  assert.equal((await handler("viewer")(req())).status, 403);
+  assert.equal((await handler("owner")(req({}, "https://evil.test"))).status, 403);
+  for (const body of [{ execution: "true" }, { action: "approve" }, { initiatedBy: "owner" }, null, []]) assert.equal((await handler("owner")(req(body))).status, 400);
+  assert.equal(reads, 0);
+  const failure = await handler("owner")(req());
+  assert.equal(failure.status, 503); assert.match(failure.headers.get("cache-control")!, /no-store/);
+  assert.equal((await failure.text()).includes("private database"), false);
+});
 
 test("agent triage never approves, exposes text or treats community reports as proof", () => {
   const candidate = { id: crypto.randomUUID(), revision: 2, status: "active", alias: "Prueba", title: "Agua disponible", details: "", reportCount: 0 };
