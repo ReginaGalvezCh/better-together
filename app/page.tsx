@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TicketSetup, type TicketPreference } from "@/components/ticket-setup";
 import { QuickAccessDock } from "@/components/quick-access-dock";
+import { TicketAccess } from "@/components/ticket-access";
 import { ArmyPulse } from "@/components/army-pulse";
 import { ReportRequest } from "@/components/report-request";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -413,7 +414,7 @@ export default function Home() {
         </div>
 
         <div className="event-moment mb-5">
-          <div className="event-summary"><span className="phase-label">Según horario · {phase}</span><h2 className="mt-2 text-2xl font-bold">{selectedSession.dateLabel}</h2><p className="mt-1 text-muted-foreground">Coliseo Central · Estadio Nacional</p></div>
+          <div className="event-summary"><span className="phase-label">Según horario · {phase}</span><h2 className="mt-2 text-2xl font-bold">{selectedSession.dateLabel}</h2><p className="mt-1 text-muted-foreground">Coliseo Central · Estadio Nacional</p><TicketAccess /></div>
           <div className="countdown" aria-label="Tiempo hasta el inicio estimado">
             {countdown.complete ? <p>La hora estimada ya pasó. Revisa las actualizaciones; esto no confirma que el show haya comenzado.</p> : <><span><strong>{countdown.days}</strong><small>días</small></span><span><strong>{countdown.hours}</strong><small>horas</small></span><span><strong>{countdown.minutes}</strong><small>min</small></span></>}
           </div>

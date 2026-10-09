@@ -3,7 +3,8 @@ import { useState } from "react";
 import { Backpack, Car, HeartHandshake, MapPin, Navigation, ShieldCheck, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { actionsByMoment, arrivalUrl, momentLabels, moments, quentroUrl, returnUrl, safeMessage, uberUrl } from "@/lib/quick-actions";
+import { actionsByMoment, arrivalUrl, momentLabels, moments, returnUrl, safeMessage, uberUrl } from "@/lib/quick-actions";
+import { TicketGuide } from "@/components/ticket-access";
 import type { EventSessionId } from "@/lib/events";
 import { useConcertMoment } from "@/hooks/use-concert-moment";
 import type { WeatherForecast } from "@/lib/weather";
@@ -57,7 +58,7 @@ export function QuickAccessDock({ sessionId, sessionDate, dateLabel, forecast, o
     <Dialog open={panel !== null} onOpenChange={(open) => { if (!open) setPanel(null); }}>
       <DialogContent className="max-h-[85dvh] overflow-y-auto">
         <DialogHeader><DialogTitle>{panel === "ticket" ? "Tu entrada en Quentro" : panel === "prepare" ? "Qué llevar" : "Avisa a alguien de confianza"}</DialogTitle><DialogDescription>{panel === "ticket" ? "Better Together no guarda tu entrada ni su QR." : panel === "prepare" ? `${dateLabel} · Lleva lo esencial y revisa qué permite el recinto.` : "Este aviso es personal. No se publica en Better Together ni avisa a seguridad."}</DialogDescription></DialogHeader>
-        {panel === "ticket" && <div className="dock-guide"><p>Abre Quentro desde el icono de tu teléfono y comprueba que aparece tu entrada antes de llegar.</p><p>El QR dinámico no se reemplaza con una captura. Si no ves la entrada, revisa la ayuda oficial.</p><a href={quentroUrl} target="_blank" rel="noopener noreferrer">Quentro: información y descarga ↗</a><a href="https://help.ticketmaster.cl/hc/es-cl/articles/49169818942609--Qu%C3%A9-es-y-c%C3%B3mo-usar-Quentro" target="_blank" rel="noopener noreferrer">Ayuda de Ticketmaster ↗</a><small>El acceso directo a la app está pendiente de validar en iPhone y Android.</small></div>}
+        {panel === "ticket" && <TicketGuide />}
         {panel === "prepare" && <div className="dock-guide packing-guide">
           <section className="packing-group"><h3>Para entrar · Oficial</h3><ul>{packingBasics.map((tip) => <li key={tip}>{tip}</li>)}</ul><a href={packingOfficialSource} target="_blank" rel="noopener noreferrer">Revisar indicaciones de Ticketmaster</a></section>
           <section className="packing-group"><h3>Para la espera · Sugerencias</h3><ul>{packingPracticalTips.map((tip) => <li key={tip}>{tip}</li>)}</ul><p className="packing-caption">Consejos de Better Together. Las recomendaciones de la comunidad se incorporarán cuando estén revisadas.</p></section>
