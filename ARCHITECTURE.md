@@ -54,10 +54,10 @@ Tono acordado para la próxima capa de interfaz: cercano, breve y útil, con voc
 
 Orden actualizado: consolidación de correcciones y Qué llevar; moderación básica; fuentes reales de Pulso; entrada y accesos; radares con fuentes vigentes; prueba con fans; música y enlaces a fanchants. Durante el concierto, el radar de baños, merch y comida/bebestibles distinguirá información oficial de reportes comunitarios. El semáforo debe incluir texto (poca fila/fila media/fila larga), antigüedad, zona amplia y estado sin datos; un reporte vencido pierde el color y no se muestra como disponibilidad actual. No medirá seguridad ni usará GPS preciso. Es alcance pendiente, no una función implementada.
 
-### Próxima capa: moderación básica (pendiente)
+### Moderación básica: cola de revisión implementada; operación pendiente
 
 La rama `feat/community-moderation` parte de main consolidado por los PR #7 y
-#8. Este apartado define criterios de aceptación, no una protección ya activa.
+#8. El primer incremento implementa la recepción privada, no un servicio de moderación permanente.
 
 1. Todas las solicitudes, incluidas las enviadas por WebMCP y la cola offline,
    pasan por validación del servidor antes de mostrarse. Los nuevos mensajes
@@ -78,10 +78,36 @@ La rama `feat/community-moderation` parte de main consolidado por los PR #7 y
    reintentos idempotentes y comportamiento offline con datos sintéticos. Los
    cambios de esquema se revisan localmente antes de cualquier migración remota.
 
-El primer incremento funcional será la cola de revisión y su separación del
-feed público. Denuncias y controles de moderador se completarán después en
-commits acotados de la misma rama; no se activarán fuentes en vivo mientras
-esta protección esté pendiente. Las urgencias siguen fuera del apoyo cotidiano.
+`lib/community-requests.ts` valida el esquema estricto, fechas y un triage conservador
+de correos, teléfonos móviles chilenos, RUT y coordenadas antes de escribir. No detecta
+todos los datos personales, violencia, odio ni información falsa: todos los envíos
+válidos quedan como `pending-review`. El servidor limita el cuerpo a 8 KiB.
+El INSERT con conflicto gestionado hace atómicos los reintentos: no duplica ni renueva
+la vigencia. POST devuelve solo `{ receipt: { received: true } }`, nunca texto ni
+identificadores guardados de otra persona. La métrica anónima distingue recepción
+para revisión de publicación y no se repite por reintentos (best-effort, no garantizada).
+
+La migración `0002_real_sumo.sql` solo añade `reviewed_at` nullable. No modifica
+migraciones anteriores ni borra registros. El valor histórico por defecto `active`
+se mantiene por compatibilidad, pero no permite publicar: GET exige además revisión
+fechada y vigencia. Los registros anteriores sin revisión no aparecen. No se ha
+aplicado la migración remota ni desplegado este incremento.
+
+El navegador separa borradores locales y recibos del feed. WebMCP tampoco agrega
+los envíos al feed. La caché usa una clave nueva y valida el contrato revisado;
+los contadores solo cuentan solicitudes revisadas vigentes. La cola tiene un único
+sincronizador, conserva borradores nuevos durante el envío y mantiene los fallos
+temporales para reintento. Al llenarse (100) o fallar el almacenamiento, no afirma
+que guardó ni cierra el formulario. Las entradas caducan 2 horas después de su
+creación, incluyendo el tiempo offline y pendiente de revisión.
+
+Faltan controles de moderador autenticados, denuncias, límites de frecuencia,
+retención/borrado de pendientes y operación humana antes de abrir esta función al
+público o activar fuentes en vivo. No existen endpoints de aprobación ni bypass
+para aprobar desde el navegador. La interfaz advierte que la prueba aún no tiene
+atención de moderadores. Una caché offline previamente aprobada puede quedar
+desactualizada tras una retirada; la interfaz señala ese límite. Las urgencias
+siguen fuera del apoyo cotidiano.
 
 ### Primera conexión propuesta: X
 

@@ -15,6 +15,13 @@
       "when": 1791472164801,
       "tag": "0001_cheerful_prowler",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791515351055,
+      "tag": "0002_real_sumo",
+      "breakpoints": true
     }
   ]
 }

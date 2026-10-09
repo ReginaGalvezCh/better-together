@@ -15,6 +15,7 @@ export const alerts = sqliteTable(
     connectivity: text("connectivity").notNull().default("online"),
     createdAt: text("created_at").notNull(),
     expiresAt: text("expires_at").notNull(),
+    reviewedAt: text("reviewed_at"),
   },
   (table) => [
     index("idx_alerts_status_created_at").on(table.status, table.createdAt),
