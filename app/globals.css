@@ -252,6 +252,10 @@ button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visibl
 .request-dialog { border: 1px solid var(--ink); background: var(--paper); color: var(--foreground); }
 .request-dialog input, .request-dialog textarea, .request-dialog button[role="combobox"] { background: #fff; color: var(--foreground); }
 .app-note { display: flex; gap: .75rem; border: 1px solid var(--border); border-radius: 1rem; background: rgb(255 253 248 / 75%); padding: 1rem; color: var(--muted-foreground); font-size: .85rem; }
+.moderation-tabs[data-slot="tabs-list"] { display: grid; height: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: .3rem; border: 1px solid var(--ink); border-radius: 1rem; background: var(--paper); padding: .3rem; }
+.moderation-tabs button[data-slot="tabs-trigger"] { height: auto; min-height: 48px; min-width: 0; font-size: 1rem; border-radius: .7rem; }
+.moderation-tabs button[data-state="active"] { background: var(--signal); color: #fff; }
+@media (min-width: 640px) { .moderation-tabs[data-slot="tabs-list"] { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .site-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1.5rem; border-top: 1px solid var(--border); padding: 1.25rem .25rem .5rem; }
 .site-footer p { display: grid; gap: .1rem; color: var(--muted-foreground); font-size: .78rem; }
 .site-footer strong { color: var(--foreground); font-size: .9rem; }

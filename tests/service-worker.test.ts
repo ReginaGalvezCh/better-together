@@ -13,7 +13,7 @@ function worker(fetcher: typeof fetch = async () => new Response("ok")) {
     URL, Response, fetch: fetcher,
     self: { location: { origin: "https://example.test" }, addEventListener: (type: string, callback: (event: unknown) => void) => listeners.set(type, callback), clients: { claim() {} }, skipWaiting() {} },
     caches: {
-      keys: async () => ["better-together-v1", "better-together-v2", "another-app"],
+      keys: async () => ["better-together-v1", "better-together-v2", "better-together-v3", "another-app"],
       delete: async (key: string) => { deleted.push(key); return true; },
       match: async (key: string | Request) => entries.get(keyOf(key)),
       open: async () => ({ put: async (key: string | Request, value: Response) => { written.push(keyOf(key)); entries.set(keyOf(key), value); } }),
@@ -55,5 +55,16 @@ test("activation only removes obsolete Better Together caches", async () => {
   let completion: Promise<unknown> | undefined;
   app.listeners.get("activate")!({ waitUntil: (value: Promise<unknown>) => { completion = value; } });
   await completion;
-  assert.deepEqual(app.deleted, ["better-together-v1"]);
+  assert.deepEqual(app.deleted, ["better-together-v1", "better-together-v2"]);
+});
+
+test("moderation pages and auth flows never enter the public offline shell", async () => {
+  const app = worker();
+  for (const path of ["/moderation", "/moderation/private", "/signin-with-chatgpt", "/signout-with-chatgpt", "/callback", "/api/moderation"]) {
+    assert.equal(await app.request(`https://example.test${path}`, "navigate"), undefined);
+  }
+  assert.deepEqual(app.written, []);
+  const privateResponse = worker(async () => new Response("private", { headers: { "Cache-Control": "private, no-store" } }));
+  await privateResponse.request("https://example.test/", "navigate");
+  assert.deepEqual(privateResponse.written, []);
 });

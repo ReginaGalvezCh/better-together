@@ -54,7 +54,7 @@ Tono acordado para la próxima capa de interfaz: cercano, breve y útil, con voc
 
 Orden actualizado: consolidación de correcciones y Qué llevar; moderación básica; fuentes reales de Pulso; entrada y accesos; radares con fuentes vigentes; prueba con fans; música y enlaces a fanchants. Durante el concierto, el radar de baños, merch y comida/bebestibles distinguirá información oficial de reportes comunitarios. El semáforo debe incluir texto (poca fila/fila media/fila larga), antigüedad, zona amplia y estado sin datos; un reporte vencido pierde el color y no se muestra como disponibilidad actual. No medirá seguridad ni usará GPS preciso. Es alcance pendiente, no una función implementada.
 
-### Moderación básica: cola de revisión implementada; operación pendiente
+### Moderación básica: cola y panel protegido; operación pendiente
 
 La rama `feat/community-moderation` parte de main consolidado por los PR #7 y
 #8. El primer incremento implementa la recepción privada, no un servicio de moderación permanente.
@@ -101,13 +101,50 @@ temporales para reintento. Al llenarse (100) o fallar el almacenamiento, no afir
 que guardó ni cierra el formulario. Las entradas caducan 2 horas después de su
 creación, incluyendo el tiempo offline y pendiente de revisión.
 
-Faltan controles de moderador autenticados, denuncias, límites de frecuencia,
-retención/borrado de pendientes y operación humana antes de abrir esta función al
-público o activar fuentes en vivo. No existen endpoints de aprobación ni bypass
-para aprobar desde el navegador. La interfaz advierte que la prueba aún no tiene
-atención de moderadores. Una caché offline previamente aprobada puede quedar
-desactualizada tras una retirada; la interfaz señala ese límite. Las urgencias
-siguen fuera del apoyo cotidiano.
+El segundo incremento añade `/moderation` y `/api/moderation`. El panel es humano,
+no un agente continuo ni un detector automático de verdad. Usa las ayudas SIWC
+existentes y valida en servidor la identidad estable de Sites en cada lectura y
+decisión. La variable privada `MODERATOR_USER_IDS` es una lista explícita de hasta
+20 IDs, separada por comas. Vacía o inválida cierra el acceso; iniciar sesión no
+otorga el rol y los visitantes de prueba no se convierten en moderadores. No se
+autoriza por correo, alias ni campos enviados por el navegador. La configuración
+de cuentas reales debe acordarse y gestionarse en el servidor antes del despliegue.
+
+El dispatcher de Sites es la frontera de confianza de las cabeceras de identidad.
+No exponer el Worker directamente ni aceptar cabeceras de identidad de visitantes
+en un servidor externo. El simulador local elimina cabeceras falsificadas y usa
+una identidad ficticia solo para QA; esa identidad no se guarda como permiso de
+producción. `.env.example` mantiene vacía la lista y `.dev.vars*` se ignora.
+
+POST exige sesión autorizada, Origin igual al origen real de la petición, la
+cabecera `X-BT-Moderation: 1`, JSON acotado y contrato estricto. No hay CORS abierto.
+Las decisiones son `pending-review → active`, `pending-review → rejected` y
+`active → hidden`. No hay restauración automática ni extensión de vigencia. El
+panel pide confirmación y motivo acotado para rechazar/ocultar. Una revisión
+numérica evita sobrescribir decisiones de otra pantalla; un conflicto o vencimiento
+devuelve 409 y obliga a actualizar. Listados por fecha/estado: hasta 50 vigentes,
+más antiguas primero, refresco de 30 segundos y actualización manual.
+
+La migración aditiva `0003_parched_moon_knight.sql` añade revisión/identificador de
+decisión y `moderation_decisions`. UPDATE e INSERT de auditoría se ejecutan en un
+batch transaccional de D1: si falla el registro, se revierte el cambio. Cada decisión
+guarda ID de solicitud, ID pseudónimo del moderador, acción, motivo, estados,
+revisión y fecha; no copia mensaje, alias ni correo. El marcador de decisión impide
+atribuir el cambio de un revisor a otro en una carrera. El registro es interno y
+no se devuelve al feed público. Esta migración se probó solo en local.
+
+El área privada y sus API responden `private, no-store`; el proxy evita caché de
+HTML. El service worker v3 excluye moderación y autenticación, no guarda respuestas
+privadas y retira las cachés anteriores al activarse. La cola privada nunca usa
+localStorage ni una cola offline de decisiones. Una retirada se refleja al
+recargar el feed; una copia offline previamente aprobada puede quedar desactualizada
+hasta reconectar, como advierte la interfaz.
+
+Faltan denuncias, límites de frecuencia, retención/borrado y operación humana antes
+de abrir esta función al público o activar fuentes en vivo. La app continúa
+advirtiendo que la prueba aún no tiene atención de moderadores. No se habilitaron
+cuentas reales, no se migró remotamente y no se desplegaron los incrementos de
+moderación. Las urgencias siguen fuera del apoyo cotidiano.
 
 ### Primera conexión propuesta: X
 
