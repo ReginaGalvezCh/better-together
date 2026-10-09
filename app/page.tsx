@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { TicketSetup, type TicketPreference } from "@/components/ticket-setup";
 import { QuickAccessDock } from "@/components/quick-access-dock";
 import { ArmyPulse } from "@/components/army-pulse";
+import { ReportRequest } from "@/components/report-request";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -88,6 +89,7 @@ export default function Home() {
   const [editingTicket, setEditingTicket] = useState(false);
   const feedRequestVersion = useRef(0);
   const syncing = useRef(false);
+  const writeBlockedUntil = useRef(0);
   const [submissionNotice, setSubmissionNotice] = useState<string | null>(null);
 
   const selectedSession = useMemo(() => eventSessions.find((session) => session.id === selectedSessionId) ?? eventSessions[0], [selectedSessionId]);
@@ -99,8 +101,12 @@ export default function Home() {
   const visibleAlerts = useMemo(() => filterByZone(reviewedAlerts, selectedZone), [reviewedAlerts, selectedZone]);
 
   const publish = useCallback(async (input: AlertInput) => {
-    const response = await fetch("/api/alerts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
-    if (!response.ok) throw new PublishError(response.status);
+    if (writeBlockedUntil.current > Date.now()) throw new PublishError(429);
+    const response = await fetch("/api/alerts", { method: "POST", headers: { "Content-Type": "application/json", "X-BT-Community": "1" }, body: JSON.stringify(input) });
+    if (!response.ok) {
+      if (response.status === 429) writeBlockedUntil.current = Date.now() + 600_000;
+      throw new PublishError(response.status);
+    }
     const body = await response.json() as { receipt?: unknown };
     return receiptSchema.parse(body.receipt);
   }, []);
@@ -153,6 +159,7 @@ export default function Home() {
           handled.add(item.clientRequestId);
           if (error.status === 410) expired += 1; else invalid += 1;
         }
+        if (error instanceof PublishError && error.status === 429) { toast.info("Alcanzaste el límite de envíos. Conservamos la cola; reintentaremos más tarde."); break; }
       }
     }
     savePending(removeHandledRequests(readPending(), handled));
@@ -315,6 +322,7 @@ export default function Home() {
       toast.success("Recibida para revisión; aún no publicada.");
     } catch (error) {
       if (error instanceof PublishError && [400, 410, 413, 415, 422].includes(error.status)) toast.error("Solicitud no aceptada: revisa el contenido y vuelve a intentar.");
+      else if (error instanceof PublishError && error.status === 429) toast.info("Alcanzaste el límite de envíos. Espera unos minutos; tu formulario sigue abierto y no se publicó.");
       else {
         try { savePending([...readPending(), { ...input, connectivity: "queued" }]); }
         catch { toast.error("No pudimos confirmar ni guardar el envío. Conserva el formulario e intenta nuevamente."); return; }
@@ -488,6 +496,7 @@ export default function Home() {
               return <article className="alert-card" key={alert.id}><div className="alert-icon"><Icon aria-hidden="true" /></div><div className="min-w-0 flex-1">
                 <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold text-primary">{categoryLabels[alert.category]}</span><span className="text-sm text-muted-foreground">{relativeTime(alert.createdAt)} · {alert.zone}</span></div>
                 <h3 className="text-lg font-semibold leading-snug">{alert.title}</h3>{alert.details && <p className="mt-1 leading-relaxed text-muted-foreground">{alert.details}</p>}<p className="mt-2 text-sm text-primary">Alias: {alert.alias}</p>
+                <ReportRequest alertId={alert.id} online={online && feedState === "ready"} />
               </div></article>;
             })}
             {lastUpdatedAt && <p className="text-center text-sm text-muted-foreground">Última carga: {new Date(lastUpdatedAt).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}</p>}
@@ -514,6 +523,7 @@ export default function Home() {
         </>}
 
         <div className="app-note mt-5"><Info className="shrink-0 text-primary" size={19} aria-hidden="true" /><p>Better Together reúne orientación comunitaria; no reemplaza al organizador, al personal del recinto ni a los servicios de emergencia.</p></div>
+        <details className="more-details mt-4"><summary>Privacidad y revisión de solicitudes</summary><div className="space-y-3 pt-3 text-sm"><p>Tu alias y sector son visibles solo si se aprueba la solicitud. No pedimos ubicación exacta. No incluyas nombres reales, teléfonos, correos, datos de tu entrada ni información de menores.</p><p>Para limitar envíos usamos un identificador protegido de tu cuenta o una cookie temporal de 24 horas. No lo mostramos a otras personas. No guardamos direcciones IP para este control.</p><p>Las denuncias contienen solo un motivo y pasan a revisión humana; no son emergencias ni implican que algo sea falso. No prometemos atención inmediata o permanente.</p><p>Política acordada en el servidor: retirar el texto 7 días después de vencer y conservar decisiones sin ese texto hasta 30 días. No puede borrar copias guardadas en otros dispositivos. La limpieza está pendiente de activación antes de publicar esta versión.</p></div></details>
         <footer className="site-footer">
           <p><strong>Better Together</strong><span>Hecho con cuidado para la comunidad.</span></p>
           <nav className="social-links" aria-label="Enlaces de Better Together">
