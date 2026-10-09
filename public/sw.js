@@ -1,4 +1,4 @@
-const CACHE = "better-together-v1";
+const CACHE = "better-together-v2";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/favicon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -9,7 +9,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))
+      Promise.all(keys.filter((key) => key.startsWith("better-together-") && key !== CACHE).map((key) => caches.delete(key)))
     )
   );
   self.clients.claim();
@@ -18,15 +18,21 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
-  if (url.pathname.startsWith("/api/")) return;
+  // Leave live APIs and external services to their own network/error handling.
+  if (url.origin !== self.location.origin || url.pathname === "/api" || url.pathname.startsWith("/api/")) return;
+  const navigation = event.request.mode === "navigate";
+  const asset = APP_SHELL.includes(url.pathname) || url.pathname.startsWith("/assets/") || url.pathname.startsWith("/_next/static/");
+  if (!navigation && !asset) return;
+  const cacheKey = navigation ? "/" : event.request;
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+        if (response.ok && !response.redirected) {
+          const copy = response.clone();
+          event.waitUntil(caches.open(CACHE).then((cache) => cache.put(cacheKey, copy)).catch(() => undefined));
+        }
         return response;
       })
-      .catch(() => caches.match(event.request).then((cached) => cached || caches.match("/")))
+      .catch(async () => (await caches.match(cacheKey)) || Response.error())
   );
 });
-
