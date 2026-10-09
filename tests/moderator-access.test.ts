@@ -12,7 +12,7 @@ const input = { sessionId: "santiago-2026-10-14", clientRequestId: "12345678-123
 
 function database() {
   const sqlite = new DatabaseSync(":memory:");
-  for (const name of ["0000_broken_cobalt_man.sql", "0001_cheerful_prowler.sql", "0002_real_sumo.sql", "0003_parched_moon_knight.sql"]) {
+  for (const name of ["0000_broken_cobalt_man.sql", "0001_cheerful_prowler.sql", "0002_real_sumo.sql", "0003_parched_moon_knight.sql", "0004_tense_firedrake.sql"]) {
     sqlite.exec(readFileSync(new URL(`../drizzle/${name}`, import.meta.url), "utf8"));
   }
   type Bound = { sql: string; values: (string | number | null)[] };
