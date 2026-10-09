@@ -52,7 +52,62 @@ Los dos filtros públicos siguen siendo **Oficial** y **Comunidad**. Oficial req
 
 Tono acordado para la próxima capa de interfaz: cercano, breve y útil, con vocabulario familiar para ARMY sin imitar frases de creadores ni llenar cada mensaje de emojis. Ejemplos propios: «Qué se viene», «Datos para tu día», «Ver el post original», «Aún falta confirmar» y «Avísanos si cambió». Los mensajes de emergencia, privacidad, permisos y moderación conservan un tono directo. Nunca convertir un comentario, popularidad o entusiasmo en una confirmación.
 
-Orden acordado: fuentes/redes primero; luego entrada y accesos, moderación, radares con fuentes reales y música. Durante el concierto, el radar de baños, merch y comida/bebestibles distinguirá información oficial de reportes comunitarios. El semáforo debe incluir texto (poca fila/fila media/fila larga), antigüedad, zona amplia y estado sin datos; un reporte vencido pierde el color y no se muestra como disponibilidad actual. No medirá seguridad ni usará GPS preciso. Es alcance pendiente, no una función implementada.
+Orden actualizado: consolidación de correcciones y Qué llevar; moderación básica; fuentes reales de Pulso; entrada y accesos; radares con fuentes vigentes; prueba con fans; música y enlaces a fanchants. Durante el concierto, el radar de baños, merch y comida/bebestibles distinguirá información oficial de reportes comunitarios. El semáforo debe incluir texto (poca fila/fila media/fila larga), antigüedad, zona amplia y estado sin datos; un reporte vencido pierde el color y no se muestra como disponibilidad actual. No medirá seguridad ni usará GPS preciso. Es alcance pendiente, no una función implementada.
+
+### Moderación básica: cola de revisión implementada; operación pendiente
+
+La rama `feat/community-moderation` parte de main consolidado por los PR #7 y
+#8. El primer incremento implementa la recepción privada, no un servicio de moderación permanente.
+
+1. Todas las solicitudes, incluidas las enviadas por WebMCP y la cola offline,
+   pasan por validación del servidor antes de mostrarse. Los nuevos mensajes
+   quedan pendientes de revisión; un fallo de moderación no publica por defecto.
+2. Rechazar datos personales y ubicación precisa antes de persistirlos. El
+   triage de violencia, odio, acoso, estafas, spam y enlaces riesgosos es una
+   ayuda, no garantía de detección exhaustiva ni verificación automática de
+   verdad. La información dudosa queda para revisión humana.
+3. Aprobar, rechazar u ocultar requiere acceso de moderador comprobado en el
+   servidor. Sin acceso configurado no se habilitan acciones administrativas.
+   Los secretos nunca se envían al navegador ni se guardan en Git.
+4. Añadir denuncia de contenido y límites contra abuso sin solicitar GPS ni
+   perfiles públicos. No ocultar automáticamente por popularidad de denuncias.
+5. Los estados pendientes, ocultos, rechazados y vencidos no aparecen en el
+   feed público ni reaparecen por caché o sincronización. La interfaz distingue
+   «recibido para revisión» de «publicado».
+6. Probar estados y transiciones, rechazo de acceso no autorizado, vencimiento,
+   reintentos idempotentes y comportamiento offline con datos sintéticos. Los
+   cambios de esquema se revisan localmente antes de cualquier migración remota.
+
+`lib/community-requests.ts` valida el esquema estricto, fechas y un triage conservador
+de correos, teléfonos móviles chilenos, RUT y coordenadas antes de escribir. No detecta
+todos los datos personales, violencia, odio ni información falsa: todos los envíos
+válidos quedan como `pending-review`. El servidor limita el cuerpo a 8 KiB.
+El INSERT con conflicto gestionado hace atómicos los reintentos: no duplica ni renueva
+la vigencia. POST devuelve solo `{ receipt: { received: true } }`, nunca texto ni
+identificadores guardados de otra persona. La métrica anónima distingue recepción
+para revisión de publicación y no se repite por reintentos (best-effort, no garantizada).
+
+La migración `0002_real_sumo.sql` solo añade `reviewed_at` nullable. No modifica
+migraciones anteriores ni borra registros. El valor histórico por defecto `active`
+se mantiene por compatibilidad, pero no permite publicar: GET exige además revisión
+fechada y vigencia. Los registros anteriores sin revisión no aparecen. No se ha
+aplicado la migración remota ni desplegado este incremento.
+
+El navegador separa borradores locales y recibos del feed. WebMCP tampoco agrega
+los envíos al feed. La caché usa una clave nueva y valida el contrato revisado;
+los contadores solo cuentan solicitudes revisadas vigentes. La cola tiene un único
+sincronizador, conserva borradores nuevos durante el envío y mantiene los fallos
+temporales para reintento. Al llenarse (100) o fallar el almacenamiento, no afirma
+que guardó ni cierra el formulario. Las entradas caducan 2 horas después de su
+creación, incluyendo el tiempo offline y pendiente de revisión.
+
+Faltan controles de moderador autenticados, denuncias, límites de frecuencia,
+retención/borrado de pendientes y operación humana antes de abrir esta función al
+público o activar fuentes en vivo. No existen endpoints de aprobación ni bypass
+para aprobar desde el navegador. La interfaz advierte que la prueba aún no tiene
+atención de moderadores. Una caché offline previamente aprobada puede quedar
+desactualizada tras una retirada; la interfaz señala ese límite. Las urgencias
+siguen fuera del apoyo cotidiano.
 
 ### Primera conexión propuesta: X
 

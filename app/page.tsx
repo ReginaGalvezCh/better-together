@@ -13,16 +13,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { categoryLabels, enabledAlertCategories, type AlertInput, type CommunityAlert } from "@/lib/alerts";
+import { alertInputSchema, containsPersonalData, isPublicAlert, parsePublicAlerts, receiptSchema, removeHandledRequests, categoryLabels, enabledAlertCategories, type AlertInput, type CommunityAlert } from "@/lib/alerts";
+import { readRequestQueue, saveRequestQueue } from "@/lib/request-queue";
 import { activities, eventSessions, getCountdownParts, getDefaultSession, getSessionPhase, informationItems, type EventSessionId } from "@/lib/events";
 import { filterByZone, isZone, sectors, sectorSource, type Zone } from "@/lib/sectors";
 import { forecastForDate, weatherApiUrl, type WeatherForecast, type WeatherKind, type WeatherResponse } from "@/lib/weather";
 
 const alertIcons = { "safe-point": MapPin, supplies: HeartHandshake, information: Sparkles };
-const pendingKey = "better-together:pending-alerts:v2";
 const selectedZoneKey = "better-together:selected-zone:v1";
 const ticketKey = "better-together:ticket:v1";
-const cacheKey = (sessionId: EventSessionId) => `better-together:alerts:${sessionId}`;
+const cacheKey = (sessionId: EventSessionId) => `better-together:reviewed-alerts:v1:${sessionId}`;
 type FeedState = "loading" | "ready" | "cached" | "error";
 type CachedFeed = { alerts: CommunityAlert[]; fetchedAt: string };
 type WeatherState = "loading" | "ready" | "unavailable" | "error";
@@ -49,16 +49,22 @@ function relativeTime(value: string) {
 }
 
 function readPending(): AlertInput[] {
-  try { return JSON.parse(localStorage.getItem(pendingKey) || "[]") as AlertInput[]; }
-  catch { return []; }
+  return readRequestQueue(localStorage);
 }
-function savePending(items: AlertInput[]) { localStorage.setItem(pendingKey, JSON.stringify(items)); }
+function savePending(items: AlertInput[]) {
+  saveRequestQueue(localStorage, items);
+}
 function readCached(sessionId: EventSessionId): CachedFeed | null {
-  try { return JSON.parse(localStorage.getItem(cacheKey(sessionId)) || "null") as CachedFeed | null; }
+  try {
+    const value = JSON.parse(localStorage.getItem(cacheKey(sessionId)) || "null");
+    if (!value || !Number.isFinite(Date.parse(value.fetchedAt))) return null;
+    return { alerts: parsePublicAlerts(value.alerts), fetchedAt: value.fetchedAt };
+  }
   catch { return null; }
 }
 function saveCached(sessionId: EventSessionId, alerts: CommunityAlert[]) {
-  localStorage.setItem(cacheKey(sessionId), JSON.stringify({ alerts, fetchedAt: new Date().toISOString() }));
+  try { localStorage.setItem(cacheKey(sessionId), JSON.stringify({ alerts, fetchedAt: new Date().toISOString() })); }
+  catch { /* A failed local cache must not turn a successful server load into an error. */ }
 }
 
 export default function Home() {
@@ -81,18 +87,22 @@ export default function Home() {
   const [ticketReady, setTicketReady] = useState(false);
   const [editingTicket, setEditingTicket] = useState(false);
   const feedRequestVersion = useRef(0);
+  const syncing = useRef(false);
+  const [submissionNotice, setSubmissionNotice] = useState<string | null>(null);
 
   const selectedSession = useMemo(() => eventSessions.find((session) => session.id === selectedSessionId) ?? eventSessions[0], [selectedSessionId]);
   const phase = getSessionPhase(selectedSession, now);
   const countdown = getCountdownParts(selectedSession, now);
   const selectedWeather = weather[selectedSession.date];
   const WeatherIcon = selectedWeather ? weatherIcons[selectedWeather.kind] : CloudSun;
-  const visibleAlerts = useMemo(() => filterByZone(alerts.filter((alert) => alert.status === "active" && Date.parse(alert.expiresAt) > now.getTime()), selectedZone), [alerts, selectedZone, now]);
+  const reviewedAlerts = useMemo(() => alerts.filter((alert) => isPublicAlert(alert, now.getTime())), [alerts, now]);
+  const visibleAlerts = useMemo(() => filterByZone(reviewedAlerts, selectedZone), [reviewedAlerts, selectedZone]);
 
   const publish = useCallback(async (input: AlertInput) => {
     const response = await fetch("/api/alerts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
     if (!response.ok) throw new PublishError(response.status);
-    return ((await response.json()) as { alert: CommunityAlert }).alert;
+    const body = await response.json() as { receipt?: unknown };
+    return receiptSchema.parse(body.receipt);
   }, []);
 
   const loadAlerts = useCallback(async (sessionId: EventSessionId, silent = false) => {
@@ -112,7 +122,8 @@ export default function Home() {
     try {
       const response = await fetch(`/api/alerts?session=${encodeURIComponent(sessionId)}`, { cache: "no-store" });
       if (!response.ok) throw new Error("load_failed");
-      const data = (await response.json()) as { alerts: CommunityAlert[] };
+      const body = await response.json() as { alerts?: unknown };
+      const data = { alerts: parsePublicAlerts(body.alerts) };
       if (version !== feedRequestVersion.current) return;
       const fetchedAt = new Date().toISOString();
       setAlerts(data.alerts);
@@ -123,25 +134,37 @@ export default function Home() {
   }, []);
 
   const syncPending = useCallback(async () => {
-    const pending = readPending();
-    if (!pending.length || !navigator.onLine) return;
-    const remaining: AlertInput[] = [];
+    let pending: AlertInput[];
+    try { pending = readPending(); }
+    catch { toast.error("No pudimos leer los envíos guardados. No se modificó la cola local."); return; }
+    if (!pending.length || !navigator.onLine || syncing.current) return;
+    syncing.current = true;
+    const handled = new Set<string>();
     let synced = 0;
     let expired = 0;
-    for (const item of pending) {
+    let invalid = 0;
+    try { for (const item of pending) {
       try {
-        const alert = await publish({ ...item, connectivity: "queued" });
-        if (alert.sessionId === selectedSessionId) setAlerts((current) => [alert, ...current.filter((entry) => entry.id !== alert.id)]);
+        await publish({ ...item, connectivity: "queued" });
+        handled.add(item.clientRequestId);
         synced += 1;
       } catch (error) {
-        if (error instanceof PublishError && error.status >= 400 && error.status < 500) expired += 1;
-        else remaining.push(item);
+        if (error instanceof PublishError && [400, 410, 413, 415, 422].includes(error.status)) {
+          handled.add(item.clientRequestId);
+          if (error.status === 410) expired += 1; else invalid += 1;
+        }
       }
     }
-    savePending(remaining);
-    if (synced) toast.success(`${synced} solicitud${synced > 1 ? "es" : ""} sincronizada${synced > 1 ? "s" : ""}`);
+    savePending(removeHandledRequests(readPending(), handled));
+    if (synced) {
+      setSubmissionNotice("Hay envíos guardados recibidos para revisión. Todavía no significa que estén publicados.");
+      toast.success(`${synced} recibida${synced > 1 ? "s" : ""} para revisión; aún no publicada${synced > 1 ? "s" : ""}.`);
+    }
     if (expired) toast.info(`${expired} solicitud${expired > 1 ? "es" : ""} guardada${expired > 1 ? "s" : ""} ya había${expired > 1 ? "n" : ""} vencido`);
-  }, [publish, selectedSessionId]);
+    if (invalid) toast.info(`${invalid} solicitud${invalid > 1 ? "es" : ""} no aceptada${invalid > 1 ? "s" : ""}. Revisa el contenido antes de volver a enviar.`);
+    } catch { toast.error("No pudimos actualizar la cola local. Los reintentos no duplicarán el envío."); }
+    finally { syncing.current = false; }
+  }, [publish]);
 
   useEffect(() => {
     const restoreTheme = window.setTimeout(() => {
@@ -229,7 +252,7 @@ export default function Home() {
     void Promise.resolve(context.registerTool({
       name: "create_community_request",
       title: "Crear solicitud comunitaria",
-      description: "Publica una solicitud cotidiana y anónima para una sesión de Better Together.",
+      description: "Envía una solicitud cotidiana a revisión; no la publica automáticamente.",
       inputSchema: {
         type: "object",
         properties: {
@@ -243,16 +266,14 @@ export default function Home() {
         required: ["alias", "category", "title", "zone", "sessionId"],
         additionalProperties: false,
       },
-      annotations: { readOnlyHint: false, untrustedContentHint: false },
+      annotations: { readOnlyHint: false, untrustedContentHint: true },
       async execute(input: unknown) {
         const value = input as Omit<AlertInput, "clientRequestId" | "createdAt" | "connectivity">;
-        const alert = await publish({ ...value, details: value.details || "", clientRequestId: crypto.randomUUID(), createdAt: new Date().toISOString(), connectivity: "online" });
-        if (alert.sessionId === selectedSessionId) setAlerts((current) => [alert, ...current]);
-        return { id: alert.id, status: alert.status, zone: alert.zone, sessionId: alert.sessionId };
+        return await publish({ ...value, details: value.details || "", clientRequestId: crypto.randomUUID(), createdAt: new Date().toISOString(), connectivity: "online" });
       },
     }, { signal: lifecycle.signal })).catch(() => undefined);
     return () => lifecycle.abort();
-  }, [publish, selectedSessionId]);
+  }, [publish]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -271,29 +292,15 @@ export default function Home() {
       connectivity: online ? "online" : "queued",
       website: String(form.get("website") || ""),
     };
-    if (input.alias.length < 2 || input.title.length < 4) {
-      toast.error("Completa el alias y un título claro.");
+    if (!alertInputSchema.safeParse(input).success || containsPersonalData(input)) {
+      toast.error("Revisa el contenido. No incluyas datos personales ni coordenadas.");
       setSubmitting(false);
       return;
     }
     if (!online) {
-      savePending([...readPending(), input]);
-      const optimistic: CommunityAlert = {
-        sessionId: input.sessionId,
-        clientRequestId: input.clientRequestId,
-        createdAt: input.createdAt,
-        alias: input.alias,
-        category: input.category,
-        title: input.title,
-        details: input.details,
-        zone: input.zone,
-        connectivity: input.connectivity,
-        id: `pending-${input.clientRequestId}`,
-        status: "active",
-        expiresAt: new Date(new Date(input.createdAt).getTime() + 2 * 60 * 60 * 1000).toISOString(),
-      };
-      setAlerts((current) => [optimistic, ...current]);
-      setFeedState("cached");
+      try { savePending([...readPending(), input]); }
+      catch { toast.error("No pudimos guardar. Mantén el formulario abierto e intenta cuando tengas señal."); setSubmitting(false); return; }
+      setSubmissionNotice("Guardada solo en este dispositivo. Se enviará para revisión al recuperar señal; todavía no es visible.");
       setOpen(false);
       formElement.reset();
       toast.info("Solicitud guardada en este dispositivo. Se intentará enviar al recuperar señal.");
@@ -301,16 +308,17 @@ export default function Home() {
       return;
     }
     try {
-      const alert = await publish(input);
-      setAlerts((current) => [alert, ...current]);
-      setFeedState("ready");
+      await publish(input);
+      setSubmissionNotice("Recibida para revisión. Todavía no es visible. La revisión no es inmediata ni garantiza publicación.");
       setOpen(false);
       formElement.reset();
-      toast.success("Solicitud publicada para esta sesión por 2 horas.");
+      toast.success("Recibida para revisión; aún no publicada.");
     } catch (error) {
-      if (error instanceof PublishError && error.status >= 400 && error.status < 500) toast.error("No pudimos publicar: revisa el contenido e inténtalo nuevamente.");
+      if (error instanceof PublishError && [400, 410, 413, 415, 422].includes(error.status)) toast.error("Solicitud no aceptada: revisa el contenido y vuelve a intentar.");
       else {
-        savePending([...readPending(), { ...input, connectivity: "queued" }]);
+        try { savePending([...readPending(), { ...input, connectivity: "queued" }]); }
+        catch { toast.error("No pudimos confirmar ni guardar el envío. Conserva el formulario e intenta nuevamente."); return; }
+        setSubmissionNotice("Envío sin confirmar. Guardada en este dispositivo para reintentar; no significa que esté publicada.");
         toast.info("No pudimos confirmar el envío. Quedó pendiente en este dispositivo.");
         setOpen(false);
       }
@@ -334,6 +342,7 @@ export default function Home() {
   }
 
   function completeTicket(preference: TicketPreference) {
+    setSubmissionNotice(null);
     if (preference.sessionId !== selectedSessionId) {
       feedRequestVersion.current += 1;
       setAlerts([]);
@@ -454,7 +463,7 @@ export default function Home() {
               <div className="sector-map" aria-label="Sectores aproximados del recinto">
                 {sectors.map((sector) => {
                   const selected = selectedZone === sector.id;
-                  const activeCount = alerts.filter((alert) => alert.zone === sector.id).length;
+                  const activeCount = reviewedAlerts.filter((alert) => alert.zone === sector.id).length;
                   return <button key={sector.id} style={{ backgroundColor: sector.color, color: sector.ink }} className={`sector-button sector-${sector.position} ${selected ? "selected" : ""}`} type="button" aria-pressed={selected} aria-label={`${sector.id}${selected ? ". Seleccionado" : ""}${activeCount ? `. ${activeCount} solicitud${activeCount === 1 ? " activa" : "es activas"}` : ". Sin solicitudes activas"}`} onClick={() => chooseZone(sector.id)}>
                     <span>{selected && <span aria-hidden="true">✓ </span>}{sector.shortLabel}</span>{activeCount > 0 && <strong aria-hidden="true">{activeCount}</strong>}
                   </button>;
@@ -469,17 +478,16 @@ export default function Home() {
             </section>
             </div></details>
             <div className="safety-note"><ShieldCheck aria-hidden="true" /><p><strong>Solo necesidades cotidianas.</strong> Para una urgencia, una persona perdida, riesgo médico o de seguridad, acude al personal del recinto o a los canales oficiales.</p></div>
+            <div className="app-note" role="status"><Info aria-hidden="true" /><p>{submissionNotice ?? "Las solicitudes pasan por revisión antes de aparecer aquí. Esta prueba aún no tiene atención de moderadores; no dependas de ella para recibir ayuda."}</p></div>
             {!online && <div className="offline-note"><WifiOff aria-hidden="true" /><p>{feedState === "cached" ? "Ves contenido guardado en este dispositivo. Puede estar desactualizado." : "Sin una carga anterior no podemos mostrar solicitudes. Puedes guardar una nueva para intentar enviarla al recuperar señal."}</p></div>}
             {feedState === "loading" && <div className="empty-state"><RefreshCw className="animate-spin" /><h3>Cargando solicitudes</h3><p>Consultando esta sesión.</p></div>}
             {feedState === "error" && alerts.length === 0 && <div className="empty-state"><WifiOff /><h3>No pudimos cargar las solicitudes</h3><p>No mostraremos ejemplos como si fueran actividad real.</p><Button variant="secondary" onClick={() => void loadAlerts(selectedSessionId)}>Reintentar</Button></div>}
-            {feedState !== "loading" && feedState !== "error" && visibleAlerts.length === 0 && <div className="empty-state"><ShieldCheck /><h3>{selectedZone ? `No hay solicitudes en ${selectedZone}` : "No hay solicitudes activas"}</h3><p>{selectedZone ? "Puedes revisar todos los sectores o publicar una solicitud para esta zona." : "Este estado es real para la sesión seleccionada."}</p></div>}
+            {feedState !== "loading" && feedState !== "error" && visibleAlerts.length === 0 && <div className="empty-state"><ShieldCheck /><h3>{selectedZone ? `No hay solicitudes en ${selectedZone}` : "No hay solicitudes activas"}</h3><p>Puedes revisar todos los sectores o enviar una solicitud a revisión.</p></div>}
             {visibleAlerts.map((alert) => {
               const Icon = alertIcons[alert.category];
-              const pending = alert.id.startsWith("pending-");
               return <article className="alert-card" key={alert.id}><div className="alert-icon"><Icon aria-hidden="true" /></div><div className="min-w-0 flex-1">
                 <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold text-primary">{categoryLabels[alert.category]}</span><span className="text-sm text-muted-foreground">{relativeTime(alert.createdAt)} · {alert.zone}</span></div>
                 <h3 className="text-lg font-semibold leading-snug">{alert.title}</h3>{alert.details && <p className="mt-1 leading-relaxed text-muted-foreground">{alert.details}</p>}<p className="mt-2 text-sm text-primary">Alias: {alert.alias}</p>
-                {pending && <span className="mt-3 inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-sm text-amber-900">Pendiente de envío en este dispositivo</span>}
               </div></article>;
             })}
             {lastUpdatedAt && <p className="text-center text-sm text-muted-foreground">Última carga: {new Date(lastUpdatedAt).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}</p>}
@@ -490,7 +498,7 @@ export default function Home() {
 
         <Dialog open={open} onOpenChange={setOpen}>
               <DialogContent className="request-dialog max-h-[90vh] overflow-y-auto sm:max-w-lg">
-                <DialogHeader><DialogTitle>Crear solicitud cotidiana</DialogTitle><DialogDescription className="text-muted-foreground">Se publicará solo en {selectedSession.dateLabel}. No compartas nombres reales, teléfonos ni ubicaciones exactas.</DialogDescription></DialogHeader>
+                <DialogHeader><DialogTitle>Crear solicitud cotidiana</DialogTitle><DialogDescription className="text-muted-foreground">Para {selectedSession.dateLabel}. Se revisa antes de aparecer; vence 2 horas después de crearla, incluso si sigue pendiente. No hay revisión inmediata ni publicación garantizada. No compartas datos personales ni ubicaciones exactas.</DialogDescription></DialogHeader>
                 <form className="space-y-4" onSubmit={handleSubmit}>
                   <div><Label className="mb-2">Tipo de solicitud</Label><div className="grid grid-cols-3 gap-2">{enabledAlertCategories.map((category) => <button key={category} className={`category-choice ${selectedCategory === category ? "selected" : ""}`} type="button" onClick={() => setSelectedCategory(category)}>{categoryLabels[category]}</button>)}</div></div>
                   <div className="grid gap-2"><Label htmlFor="alias">Alias anónimo</Label><Input id="alias" name="alias" maxLength={24} placeholder="Ej. PurpleMoon" required autoComplete="off" /></div>
@@ -498,7 +506,7 @@ export default function Home() {
                   <div className="grid gap-2"><Label htmlFor="details">Detalle opcional</Label><Textarea id="details" name="details" maxLength={240} placeholder="Agrega solo lo necesario" rows={3} /></div>
                   <div className="grid gap-2"><Label htmlFor="zone">Zona aproximada</Label><Select name="zone" value={requestZone} onValueChange={(value) => { if (isZone(value)) setRequestZone(value); }}><SelectTrigger id="zone" className="h-11 w-full"><SelectValue /></SelectTrigger><SelectContent>{sectors.map((sector) => <SelectItem key={sector.id} value={sector.id}>{sector.id}</SelectItem>)}</SelectContent></Select><p className="text-xs text-muted-foreground">Publicamos solo el nombre del sector, nunca coordenadas.</p></div>
                   <input className="hidden" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
-                  <Button className="h-12 w-full text-base font-bold" type="submit" disabled={submitting}>{submitting ? "Guardando…" : online ? "Publicar por 2 horas" : "Guardar para intentar después"}</Button>
+                  <Button className="h-12 w-full text-base font-bold" type="submit" disabled={submitting}>{submitting ? "Guardando…" : online ? "Enviar a revisión" : "Guardar para intentar después"}</Button>
                 </form>
               </DialogContent>
         </Dialog>
