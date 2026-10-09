@@ -19,6 +19,7 @@ import { readRequestQueue, saveRequestQueue } from "@/lib/request-queue";
 import { activities, eventSessions, getCountdownParts, getDefaultSession, getSessionPhase, informationItems, type EventSessionId } from "@/lib/events";
 import { filterByZone, isZone, sectors, sectorSource, type Zone } from "@/lib/sectors";
 import { forecastForDate, weatherApiUrl, type WeatherForecast, type WeatherKind, type WeatherResponse } from "@/lib/weather";
+import { randomCommunityAlias } from "@/lib/community-alias";
 
 const alertIcons = { "safe-point": MapPin, supplies: HeartHandshake, information: Sparkles };
 const selectedZoneKey = "better-together:selected-zone:v1";
@@ -77,6 +78,7 @@ export default function Home() {
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [online, setOnline] = useState(true);
   const [open, setOpen] = useState(false);
+  const [requestAlias, setRequestAlias] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<AlertInput["category"]>("safe-point");
   const [submitting, setSubmitting] = useState(false);
   const [weather, setWeather] = useState<Record<string, WeatherForecast>>({});
@@ -337,6 +339,12 @@ export default function Home() {
     setSelectedCategory(category);
     if (selectedZone) setRequestZone(selectedZone);
     setActiveSection("help");
+    openRequestDialog();
+  }
+
+  function openRequestDialog() {
+    setRequestAlias(randomCommunityAlias());
+    if (selectedZone) setRequestZone(selectedZone);
     setOpen(true);
   }
 
@@ -501,7 +509,7 @@ export default function Home() {
             })}
             {lastUpdatedAt && <p className="text-center text-sm text-muted-foreground">Última carga: {new Date(lastUpdatedAt).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}</p>}
 
-            <Button className="mt-2 h-14 w-full rounded-2xl text-base font-bold" onClick={() => setOpen(true)}><HeartHandshake /> Crear solicitud para {selectedSession.shortDate}</Button>
+            <Button className="mt-2 h-14 w-full rounded-2xl text-base font-bold" onClick={openRequestDialog}><HeartHandshake /> Crear solicitud para {selectedSession.shortDate}</Button>
           </TabsContent>
         </Tabs>
 
@@ -510,7 +518,7 @@ export default function Home() {
                 <DialogHeader><DialogTitle>Crear solicitud cotidiana</DialogTitle><DialogDescription className="text-muted-foreground">Para {selectedSession.dateLabel}. Se revisa antes de aparecer; vence 2 horas después de crearla, incluso si sigue pendiente. No hay revisión inmediata ni publicación garantizada. No compartas datos personales ni ubicaciones exactas.</DialogDescription></DialogHeader>
                 <form className="space-y-4" onSubmit={handleSubmit}>
                   <div><Label className="mb-2">Tipo de solicitud</Label><div className="grid grid-cols-3 gap-2">{enabledAlertCategories.map((category) => <button key={category} className={`category-choice ${selectedCategory === category ? "selected" : ""}`} type="button" onClick={() => setSelectedCategory(category)}>{categoryLabels[category]}</button>)}</div></div>
-                  <div className="grid gap-2"><Label htmlFor="alias">Alias anónimo</Label><Input id="alias" name="alias" maxLength={24} placeholder="Ej. PurpleMoon" required autoComplete="off" /></div>
+                  <div className="grid gap-2"><Label htmlFor="alias">Tu alias para esta solicitud</Label><div className="flex min-w-0 gap-2"><Input id="alias" name="alias" className="min-w-0" value={requestAlias} onChange={(event) => setRequestAlias(event.target.value)} maxLength={24} required autoComplete="off" aria-describedby="alias-note" /><Button type="button" variant="outline" className="shrink-0" disabled={submitting} onClick={() => setRequestAlias(randomCommunityAlias(requestAlias))}><RefreshCw className="size-4" aria-hidden="true" /> Otro alias</Button></div><p id="alias-note" className="text-xs text-muted-foreground">Te sugerimos uno al azar. Puedes cambiarlo; evita tu nombre real. No identifica ni verifica una cuenta.</p></div>
                   <div className="grid gap-2"><Label htmlFor="title">¿Qué necesitas compartir?</Label><Input id="title" name="title" maxLength={80} placeholder="Un mensaje corto y claro" required /></div>
                   <div className="grid gap-2"><Label htmlFor="details">Detalle opcional</Label><Textarea id="details" name="details" maxLength={240} placeholder="Agrega solo lo necesario" rows={3} /></div>
                   <div className="grid gap-2"><Label htmlFor="zone">Zona aproximada</Label><Select name="zone" value={requestZone} onValueChange={(value) => { if (isZone(value)) setRequestZone(value); }}><SelectTrigger id="zone" className="h-11 w-full"><SelectValue /></SelectTrigger><SelectContent>{sectors.map((sector) => <SelectItem key={sector.id} value={sector.id}>{sector.id}</SelectItem>)}</SelectContent></Select><p className="text-xs text-muted-foreground">Publicamos solo el nombre del sector, nunca coordenadas.</p></div>
