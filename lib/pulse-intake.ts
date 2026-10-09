@@ -7,6 +7,9 @@ export const pulseSubmissionSchema = z.object({
   // Optional context supplied by an editor or permitted API, never scraped here.
   text: z.string().max(4000).default(""),
   publishedAt: z.string().datetime({ offset: true }).nullable().default(null),
+  purpose: z.enum(["pulse", "reference"]).default("pulse"),
+  // Editorial validity of a guide/event, never inferred from post date or caption.
+  validUntil: z.string().datetime({ offset: true }).nullable().default(null),
   sessions: z.union([z.literal("all"), z.array(z.enum(eventSessionIds)).min(1).max(3)]).default("all"),
 }).strict();
 export type PulseSubmission = z.infer<typeof pulseSubmissionSchema>;
@@ -14,8 +17,9 @@ export type PulseCandidate = {
   platform: PulseSubmission["platform"]; url: string;
   sessions: PulseSubmission["sessions"]; publishedAt: string | null;
   collectedAt: string; expiresAt: string;
+  purpose: PulseSubmission["purpose"];
   origin: "community"; status: "pending-review" | "needs-context" | "sensitive-review";
-  category: "access" | "transport" | "activities" | "tickets" | "discussion";
+  category: "access" | "transport" | "activities" | "tickets" | "freebies" | "fanchants" | "merchandise" | "discussion";
   // A short excerpt for private review only, not a generated or verified summary.
   excerpt: string | null;
 };
@@ -50,12 +54,15 @@ function relevant(text: string) {
 }
 function sensitive(text: string) {
   // Conservative triage, not exhaustive PII detection; human review is always required.
-  return /\b(?:robo|asalto|emergencia|ambulancia|medic[oa]|menor|desaparecid[oa]|perdid[oa]|herid[oa]|acoso|rut|pasaporte|direccion|ubicacion exacta)\b/.test(text)
+  return /\b(?:robo|asalto|emergencia|ambulancia|medic[oa]|menor|desaparecid[oa]|perdid[oa]|herid[oa]|acoso|rut|pasaporte|direccion|ubicacion exacta|hotel|hoteles|alojamiento|vuelo|vuelos)\b/.test(text)
     || /[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.test(text)
     || /(?:\+?56[\s-]*)?9(?:[\s-]*\d){8}\b/.test(text)
     || /\b-?\d{1,3}\.\d{4,}\s*[,;]\s*-?\d{1,3}\.\d{4,}\b/.test(text);
 }
 function category(text: string): PulseCandidate["category"] {
+  if (/\b(?:fanchant|fanchants|fan chant|fan chants)\b/.test(text)) return "fanchants";
+  if (/\b(?:freebie|freebies)\b/.test(text)) return "freebies";
+  if (/\b(?:merch|merchandising|merchandise|pop-up|popup|pop up)\b/.test(text)) return "merchandise";
   if (/\b(?:acceso|accesos|puerta|puertas|fila|filas|ingreso)\b/.test(text)) return "access";
   if (/\b(?:metro|uber|bus|buses|transporte|regreso)\b/.test(text)) return "transport";
   if (/\b(?:quentro|ticket|tickets|entrada|entradas)\b/.test(text)) return "tickets";
@@ -78,7 +85,11 @@ export function collectPulseCandidates(input: unknown, now = new Date(), knownUr
     if (!url) { skipped.invalid++; continue; }
     if (seen.has(url)) { skipped.duplicate++; continue; }
     const age = post.publishedAt ? now.getTime() - Date.parse(post.publishedAt) : null;
-    if (age !== null && (age > 24 * 60 * 60_000 || age < -5 * 60_000)) { skipped.stale++; continue; }
+    const maxAge = (post.purpose === "reference" ? 30 : 1) * 24 * 60 * 60_000;
+    const validity = post.validUntil ? Date.parse(post.validUntil) : null;
+    if (age !== null && (age > maxAge || age < -5 * 60_000)) { skipped.stale++; continue; }
+    if (validity !== null && validity <= now.getTime()) { skipped.stale++; continue; }
+    if (validity !== null && (post.purpose !== "reference" || validity > now.getTime() + 30 * 24 * 60 * 60_000)) { skipped.invalid++; continue; }
     const text = normalize(post.text);
     if (text.trim() && !relevant(text)) { skipped.unrelated++; continue; }
     const isSensitive = sensitive(text);
@@ -86,9 +97,10 @@ export function collectPulseCandidates(input: unknown, now = new Date(), knownUr
     candidates.push({
       platform: post.platform, url, sessions: post.sessions, publishedAt: post.publishedAt,
       collectedAt: now.toISOString(),
-      expiresAt: new Date((post.publishedAt ? Date.parse(post.publishedAt) : now.getTime()) + 24 * 60 * 60_000).toISOString(),
+      purpose: post.purpose,
+      expiresAt: new Date(validity ?? (post.purpose === "pulse" && post.publishedAt ? Date.parse(post.publishedAt) : now.getTime()) + 24 * 60 * 60_000).toISOString(),
       origin: "community",
-      status: isSensitive ? "sensitive-review" : !text.trim() || !post.publishedAt ? "needs-context" : "pending-review",
+      status: isSensitive ? "sensitive-review" : !text.trim() || !post.publishedAt || (post.purpose === "reference" && !post.validUntil) ? "needs-context" : "pending-review",
       category: category(text),
       excerpt: isSensitive || !text.trim() ? null : post.text.replace(/[\u0000-\u001f\u007f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, 180),
     });

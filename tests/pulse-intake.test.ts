@@ -42,10 +42,27 @@ test("all candidates need review; link-only submissions need context", () => {
   assert.equal(result.candidates[1].excerpt, null);
 });
 test("sensitive candidates do not retain raw excerpts or personal data", () => {
-  for (const text of ["#BTSChile menor perdido", "#BTSChile asistencia médica", "#BTSChile correo persona@example.com", "#BTSChile teléfono +56 9 1234 5678", "#BTSChile -33.46456,-70.61001"]) {
+  for (const text of ["#BTSChile menor perdido", "#BTSChile asistencia médica", "#BTSChile correo persona@example.com", "#BTSChile teléfono +56 9 1234 5678", "#BTSChile -33.46456,-70.61001", "BTS Chile datos del hotel y vuelos"]) {
     const candidate = collectPulseCandidates([{ ...post, text }], now).candidates[0];
     assert.equal(candidate.status, "sensitive-review");
     assert.equal(candidate.excerpt, null);
     assert.equal("text" in candidate, false);
+  }
+});
+
+test("older reference posts need explicit editorial validity and never become live news", () => {
+  const reference = { ...post, publishedAt: "2026-10-02T21:00:00Z", purpose: "reference" };
+  assert.equal(collectPulseCandidates([reference], now).candidates[0].status, "needs-context");
+  const validUntil = "2026-10-14T23:00:00Z";
+  const candidate = collectPulseCandidates([{ ...reference, validUntil }], now).candidates[0];
+  assert.equal(candidate.purpose, "reference");
+  assert.equal(candidate.status, "pending-review");
+  assert.equal(candidate.expiresAt, new Date(validUntil).toISOString());
+  assert.equal(collectPulseCandidates([{ ...reference, validUntil: "2026-10-07T23:00:00Z" }], now).skipped.stale, 1);
+  assert.equal(collectPulseCandidates([{ ...reference, validUntil: "2027-10-14T23:00:00Z" }], now).skipped.invalid, 1);
+});
+test("freebie, fanchant and merchandise links get distinct review topics", () => {
+  for (const [text, expected] of [["#BTSChile freebies", "freebies"], ["BTS Chile fan chants", "fanchants"], ["BTS Chile pop-up", "merchandise"]]) {
+    assert.equal(collectPulseCandidates([{ ...post, text }], now).candidates[0].category, expected);
   }
 });
