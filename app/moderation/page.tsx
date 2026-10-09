@@ -3,7 +3,6 @@ import { moderatorIds } from "./access";
 import { authorizeModerator } from "@/lib/moderation";
 import { RequestValidationError } from "@/lib/community-requests";
 import { ModerationPanel } from "@/components/moderation-panel";
-import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Moderación · Better Together", robots: { index: false, follow: false } };
@@ -14,7 +13,7 @@ export default async function ModerationPage() {
   try { authorizeModerator(user, moderatorIds()); }
   catch (error) { denied = error instanceof RequestValidationError ? error.message : "Moderación no disponible."; }
   return <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-    <Link href="/" className="font-semibold underline">Volver a Better Together</Link>
+    <a href="/" className="font-semibold underline">Volver a Better Together</a>
     <header className="my-7"><p className="eyebrow">ARMY se cuida · Área privada</p><h1 className="mt-2 text-3xl font-bold">Revisión de solicitudes</h1></header>
     {denied ? <section className="content-card">
       <h2 className="text-xl font-bold">Acceso protegido</h2>
