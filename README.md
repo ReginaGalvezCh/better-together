@@ -6,6 +6,8 @@ Experiencia móvil para orientar y acompañar a fans durante las tres sesiones d
 
 **Frontend / UI portfolio highlights:** React 19, TypeScript y Next.js 16; mapa original de sectores con selección por teclado; guía esquemática de accesos generales; estados de carga, vacío y error; flujo local para conectividad limitada. Los [criterios verificables](#criterios-verificables) y las fuentes están documentados más abajo.
 
+**Demo pública navegable:** [Explorar mapa de sectores y accesos](https://better-together-ui-demo.regina-galve-9336.chatgpt.site). Es una [muestra independiente de solo lectura](portfolio-demo/README.md), construida con React y TypeScript a partir de los datos públicos del proyecto. No incluye solicitudes, cuentas ni moderación.
+
 **Estado:** repositorio de código y prototipo de portafolio. Publicar este código no
 despliega el Site ni habilita solicitudes, moderación, fuentes pagadas o automatizaciones.
 Las fechas del evento ya pasaron; no debe usarse como servicio activo de asistencia.
