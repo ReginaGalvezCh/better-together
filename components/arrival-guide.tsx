@@ -25,7 +25,7 @@ export function ArrivalGuide() {
       ><span className="arrival-node-number">0{index + 1}</span><span>{approach.label}</span></button>)}
     </div>
     <div className="arrival-detail" aria-live="polite">
-      <span className="eyebrow">Acceso seleccionado</span>
+      <span className="eyebrow">Opción para comparar</span>
       <strong>{selected.label}</strong>
       <p>{selected.transit}. {selected.note}</p>
     </div>

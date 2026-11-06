@@ -23,9 +23,9 @@ Las fechas del evento ya pasaron; no debe usarse como servicio activo de asisten
 ## Guía de llegada al Estadio Nacional
 
 En Inicio aparece primero el mapa esquemático de los 16 sectores publicados en
-[Ticketmaster](https://www.ticketmaster.cl/event/bts-world-tour-arirang-live-2026-scl).
+[Ticketmaster](https://help.ticketmaster.cl/hc/es-cl/articles/45167383157905-BTS-WORLD-TOUR-ARIRANG).
 Al elegir un sector, queda destacado, se guarda solo en el dispositivo y la vista de
-Ayuda muestra sus avisos. El mapa es una interpretación visual original: no dibuja
+Ayuda muestra sus avisos; no cambia los datos de la entrada guardada. El mapa es una interpretación visual original: no dibuja
 puertas, recorridos ni distancias. Incluye enlaces al listado de sectores y a la
 [guía oficial de DG Medios para BTS](https://info.dgmedios.com/content/uploads/2026/10/GUIA_BTS_WORLD_TOUR_ARIRANG_EN_SANTIAGO.pdf).
 

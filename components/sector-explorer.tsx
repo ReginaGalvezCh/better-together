@@ -15,7 +15,7 @@ export function SectorExplorer({ selectedZone, activeCounts, onSelect }: Props) 
   return <section className="sector-panel sector-explorer" aria-labelledby="sector-map-title">
     <div className="sector-panel-heading">
       <span className="sector-heading-icon"><MapIcon aria-hidden="true" /></span>
-      <div><p className="eyebrow">Mapa interactivo · BTS Santiago 2026</p><h3 id="sector-map-title">Encuentra tu sector</h3><p>Toca la zona de tu entrada para destacarla y filtrar los avisos de la comunidad.</p></div>
+      <div><p className="eyebrow">Mapa interactivo · BTS Santiago 2026</p><h3 id="sector-map-title">Explora los sectores</h3><p>Elige un sector para filtrar los avisos de la comunidad. Esto no cambia los datos de tu entrada.</p></div>
       <span className="privacy-chip"><ShieldCheck aria-hidden="true" /> Sin GPS</span>
     </div>
     <div className="sector-map-shell">
@@ -35,6 +35,6 @@ export function SectorExplorer({ selectedZone, activeCounts, onSelect }: Props) 
       <div><span className="eyebrow">Tu selección</span><strong>{selectedZone ?? "Todos los sectores"}</strong><p>Se guarda solo en este dispositivo.</p></div>
       <button className="all-zones-button" type="button" aria-pressed={selectedZone === null} onClick={() => onSelect(null)}>Ver todos</button>
     </div>
-    <div className="sector-reference"><p>Esquema original y referencial basado en los sectores publicados para BTS. No representa recorridos, distancias ni puertas de ingreso. Verifica tu acceso en la entrada y la guía oficial del concierto.</p><div className="sector-source-links"><a href={sectorSource} target="_blank" rel="noreferrer">Sectores en Ticketmaster <ExternalLink size={13} aria-hidden="true" /></a><a href={officialGuide} target="_blank" rel="noreferrer">Guía oficial BTS (PDF) <ExternalLink size={13} aria-hidden="true" /></a></div></div>
+    <div className="sector-reference"><p>Esquema original y referencial basado en los sectores publicados para BTS. No representa recorridos, distancias ni puertas de ingreso. Verifica tu acceso en la entrada y la guía oficial del concierto.</p><div className="sector-source-links"><a href={sectorSource} target="_blank" rel="noreferrer">Información BTS en Ticketmaster <ExternalLink size={13} aria-hidden="true" /></a><a href={officialGuide} target="_blank" rel="noreferrer">Guía oficial BTS (PDF) <ExternalLink size={13} aria-hidden="true" /></a></div></div>
   </section>;
 }
