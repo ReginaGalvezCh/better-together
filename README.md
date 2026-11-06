@@ -13,7 +13,7 @@ Las fechas del evento ya pasaron; no debe usarse como servicio activo de asisten
 - Información práctica, Pulse y actividades con fuente y fecha de revisión.
 - Solicitudes cotidianas aisladas por sesión, con zonas aproximadas.
 - Recepción pendiente de revisión y panel humano protegido para aprobar, rechazar y ocultar.
-- Mapa esquemático sin GPS para elegir un sector y priorizar avisos cercanos.
+- Mapa interactivo de 16 sectores BTS, visible en Inicio, sin GPS, para elegir un sector y filtrar avisos.
 - Guía visual independiente con los accesos generales Pedro de Valdivia, Guillermo Mann y Avenida Grecia al Parque Estadio Nacional.
 - Cola local idempotente cuando no hay señal y descarte de solicitudes vencidas.
 - Estados distintos para carga, vacío, error y contenido guardado.
@@ -22,7 +22,16 @@ Las fechas del evento ya pasaron; no debe usarse como servicio activo de asisten
 
 ## Guía de llegada al Estadio Nacional
 
-En Inicio, la guía permite seleccionar uno de tres accesos generales publicados por el
+En Inicio aparece primero el mapa esquemático de los 16 sectores publicados en
+[Ticketmaster](https://www.ticketmaster.cl/event/bts-world-tour-arirang-live-2026-scl).
+Al elegir un sector, queda destacado, se guarda solo en el dispositivo y la vista de
+Ayuda muestra sus avisos. El mapa es una interpretación visual original: no dibuja
+puertas, recorridos ni distancias. Incluye enlaces al listado de sectores y a la
+[guía oficial de DG Medios para BTS](https://info.dgmedios.com/content/uploads/2026/10/GUIA_BTS_WORLD_TOUR_ARIRANG_EN_SANTIAGO.pdf).
+
+![Mapa interactivo de sectores BTS en Inicio](./docs/sector-map-preview.png)
+
+Debajo, la guía permite seleccionar uno de tres accesos generales publicados por el
 [Parque Estadio Nacional](https://parqueestadionacional.cl/como-llegar). La tarjeta de
 detalle y el estado seleccionado cambian juntos. El diagrama es original y esquemático:
 no representa distancias, rutas, puertas ni la posición física de los accesos.
@@ -42,7 +51,8 @@ ofrece orientación operativa para un evento vigente.
 - Los botones funcionan con teclado y muestran foco visible.
 - La guía conserva enlaces separados a la fuente del Parque y a la información del evento.
 - Ningún acceso se vincula a un sector o puerta de BTS sin fuente específica.
-- El mapa de sectores, la selección local y los avisos existentes siguen separados de la nueva guía.
+- El mapa de sectores está visible en Inicio; al elegir un sector cambia el filtro de Ayuda sin pedir ubicación exacta.
+- El mapa enlaza la fuente de sectores y la guía oficial del evento sin atribuir puertas específicas al esquema.
 
 ## Desarrollo
 
