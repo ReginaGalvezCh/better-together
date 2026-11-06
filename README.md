@@ -1,6 +1,10 @@
 # Better Together
 
+![Vista del mapa interactivo de sectores en la interfaz móvil](./docs/sector-map-preview.png)
+
 Experiencia móvil para orientar y acompañar a fans durante las tres sesiones de BTS en Santiago. Reúne información comprobable, un Pulse curado, actividades y una ayuda cotidiana acotada.
+
+**Frontend / UI portfolio highlights:** React 19, TypeScript y Next.js 16; mapa original de sectores con selección por teclado; guía esquemática de accesos generales; estados de carga, vacío y error; flujo local para conectividad limitada. Los [criterios verificables](#criterios-verificables) y las fuentes están documentados más abajo.
 
 **Estado:** repositorio de código y prototipo de portafolio. Publicar este código no
 despliega el Site ni habilita solicitudes, moderación, fuentes pagadas o automatizaciones.
@@ -28,8 +32,6 @@ Al elegir un sector, queda destacado, se guarda solo en el dispositivo y la vist
 Ayuda muestra sus avisos; no cambia los datos de la entrada guardada. El mapa es una interpretación visual original: no dibuja
 puertas, recorridos ni distancias. Incluye enlaces al listado de sectores y a la
 [guía oficial de DG Medios para BTS](https://info.dgmedios.com/content/uploads/2026/10/GUIA_BTS_WORLD_TOUR_ARIRANG_EN_SANTIAGO.pdf).
-
-![Mapa interactivo de sectores BTS en Inicio](./docs/sector-map-preview.png)
 
 Debajo, la guía permite seleccionar uno de tres accesos generales publicados por el
 [Parque Estadio Nacional](https://parqueestadionacional.cl/como-llegar). La tarjeta de
