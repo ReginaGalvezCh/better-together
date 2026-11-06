@@ -1,4 +1,4 @@
-export const sectorSource = "https://www.ticketmaster.cl/event/bts-world-tour-arirang-live-2026-scl";
+export const sectorSource = "https://help.ticketmaster.cl/hc/es-cl/articles/45167383157905-BTS-WORLD-TOUR-ARIRANG";
 
 // Color families and names from Ticketmaster; positions are schematic, not routes.
 export const sectors = [

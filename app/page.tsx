@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Cloud, CloudFog, CloudLightning, CloudRain, CloudSun, Clock3, Droplets, ExternalLink, HeartHandshake, Info, Map as MapIcon, MapPin, Moon, Newspaper, RefreshCw, ShieldCheck, Snowflake, Sparkles, Sun, Wifi, WifiOff } from "lucide-react";
+import { CalendarDays, Cloud, CloudFog, CloudLightning, CloudRain, CloudSun, Clock3, Droplets, ExternalLink, HeartHandshake, Info, MapPin, Moon, Newspaper, RefreshCw, ShieldCheck, Snowflake, Sparkles, Sun, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TicketSetup, type TicketPreference } from "@/components/ticket-setup";
 import { QuickAccessDock } from "@/components/quick-access-dock";
 import { TicketAccess } from "@/components/ticket-access";
+import { ArrivalGuide } from "@/components/arrival-guide";
+import { SectorExplorer } from "@/components/sector-explorer";
 import { ArmyPulse } from "@/components/army-pulse";
 import { ReportRequest } from "@/components/report-request";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { alertInputSchema, containsPersonalData, isPublicAlert, parsePublicAlerts, receiptSchema, removeHandledRequests, categoryLabels, enabledAlertCategories, type AlertInput, type CommunityAlert } from "@/lib/alerts";
 import { readRequestQueue, saveRequestQueue } from "@/lib/request-queue";
 import { activities, eventSessions, getCountdownParts, getDefaultSession, getSessionPhase, informationItems, type EventSessionId } from "@/lib/events";
-import { filterByZone, isZone, sectors, sectorSource, type Zone } from "@/lib/sectors";
+import { filterByZone, isZone, sectors, type Zone } from "@/lib/sectors";
 import { forecastForDate, weatherApiUrl, type WeatherForecast, type WeatherKind, type WeatherResponse } from "@/lib/weather";
 import { randomCommunityAlias } from "@/lib/community-alias";
 
@@ -435,6 +437,7 @@ export default function Home() {
           </TabsList>
 
           <TabsContent value="home" className="space-y-3">
+            <SectorExplorer selectedZone={selectedZone} activeCounts={Object.fromEntries(sectors.map((sector) => [sector.id, reviewedAlerts.filter((alert) => alert.zone === sector.id).length]))} onSelect={chooseZone} />
             <button type="button" className="pulse-shortcut" onClick={() => setActiveSection("pulse")}><Newspaper aria-hidden="true" /><span><strong>Pulso ARMY</strong><small>Tres temas para tu concierto · Ver novedades</small></span><span aria-hidden="true">→</span></button>
             <div className="community-status">
               <span className={`signal-dot ${online ? "online" : "offline"}`} aria-hidden="true" />
@@ -447,6 +450,7 @@ export default function Home() {
               <p className="mt-2 leading-relaxed text-muted-foreground">{item.value}</p>
               <div className="source-row"><span>{item.scope} · Revisado {item.reviewedAt}</span><a href={item.sourceUrl} target="_blank" rel="noreferrer">{item.sourceLabel}<ExternalLink /></a></div>
             </article>)}
+            <ArrivalGuide />
             <details className="more-details">
               <summary>Ver horarios, accesos y actividades</summary>
               <div className="space-y-3 pt-3">
@@ -470,30 +474,7 @@ export default function Home() {
           <TabsContent value="help" className="space-y-3">
             <div className="section-heading"><div><p>Ayuda cotidiana · En prueba</p><h2>Solicitudes de {selectedSession.shortDate}</h2></div><span>{visibleAlerts.length} visibles</span></div>
             <div className="current-sector"><div><p className="eyebrow">Avisos de tu sector</p><strong>{selectedZone ?? "Todos los sectores"}</strong><p>Puedes cambiarlo si te mueves dentro del recinto.</p></div></div>
-            <details className="more-details"><summary>Cambiar sector o ver el plano</summary><div className="pt-3">
-            <section className="sector-panel" aria-labelledby="sector-map-title">
-              <div className="sector-panel-heading">
-                <span className="sector-heading-icon"><MapIcon aria-hidden="true" /></span>
-                <div><p className="eyebrow">Tu sector, a mano</p><h3 id="sector-map-title">¿En qué sector estás?</h3><p>Busca el nombre de tu entrada y elige dónde estás ahora.</p></div>
-                <span className="privacy-chip"><ShieldCheck aria-hidden="true" /> Sin ubicación exacta</span>
-              </div>
-              <div className="sector-map" aria-label="Sectores aproximados del recinto">
-                {sectors.map((sector) => {
-                  const selected = selectedZone === sector.id;
-                  const activeCount = reviewedAlerts.filter((alert) => alert.zone === sector.id).length;
-                  return <button key={sector.id} style={{ backgroundColor: sector.color, color: sector.ink }} className={`sector-button sector-${sector.position} ${selected ? "selected" : ""}`} type="button" aria-pressed={selected} aria-label={`${sector.id}${selected ? ". Seleccionado" : ""}${activeCount ? `. ${activeCount} solicitud${activeCount === 1 ? " activa" : "es activas"}` : ". Sin solicitudes activas"}`} onClick={() => chooseZone(sector.id)}>
-                    <span>{selected && <span aria-hidden="true">✓ </span>}{sector.shortLabel}</span>{activeCount > 0 && <strong aria-hidden="true">{activeCount}</strong>}
-                  </button>;
-                })}
-                <span className="sector-stage" aria-hidden="true">Escenario<br />360°</span>
-              </div>
-              <div className="sector-selection">
-                <div><strong>{selectedZone ? `Viendo ${selectedZone}` : "Viendo todos los sectores"}</strong><p>La selección queda guardada únicamente en este dispositivo.</p></div>
-                <button className="all-zones-button" type="button" aria-pressed={selectedZone === null} onClick={() => chooseZone(null)}>Ver todos</button>
-              </div>
-              <div className="sector-reference"><p>Esquema referencial · Cancha Andes y Pacífico comparten la cancha 360°. Ingresa por el sector de tu entrada. Los puntos de encuentro se acuerdan por separado.</p><a href={sectorSource} target="_blank" rel="noreferrer">Ver plano en Ticketmaster <ExternalLink size={13} aria-hidden="true" /></a></div>
-            </section>
-            </div></details>
+            <button className="map-shortcut" type="button" onClick={() => setActiveSection("home")}>Ver mapa de sectores en Inicio <span aria-hidden="true">↗</span></button>
             <div className="safety-note"><ShieldCheck aria-hidden="true" /><p><strong>Solo necesidades cotidianas.</strong> Para una urgencia, una persona perdida, riesgo médico o de seguridad, acude al personal del recinto o a los canales oficiales.</p></div>
             <div className="app-note" role="status"><Info aria-hidden="true" /><p>{submissionNotice ?? "Las solicitudes pasan por revisión antes de aparecer aquí. Esta prueba aún no tiene atención de moderadores; no dependas de ella para recibir ayuda."}</p></div>
             {!online && <div className="offline-note"><WifiOff aria-hidden="true" /><p>{feedState === "cached" ? "Ves contenido guardado en este dispositivo. Puede estar desactualizado." : "Sin una carga anterior no podemos mostrar solicitudes. Puedes guardar una nueva para intentar enviarla al recuperar señal."}</p></div>}
