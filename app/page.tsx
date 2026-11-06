@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { TicketSetup, type TicketPreference } from "@/components/ticket-setup";
 import { QuickAccessDock } from "@/components/quick-access-dock";
 import { TicketAccess } from "@/components/ticket-access";
+import { ArrivalGuide } from "@/components/arrival-guide";
 import { ArmyPulse } from "@/components/army-pulse";
 import { ReportRequest } from "@/components/report-request";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -447,6 +448,7 @@ export default function Home() {
               <p className="mt-2 leading-relaxed text-muted-foreground">{item.value}</p>
               <div className="source-row"><span>{item.scope} · Revisado {item.reviewedAt}</span><a href={item.sourceUrl} target="_blank" rel="noreferrer">{item.sourceLabel}<ExternalLink /></a></div>
             </article>)}
+            <ArrivalGuide />
             <details className="more-details">
               <summary>Ver horarios, accesos y actividades</summary>
               <div className="space-y-3 pt-3">
