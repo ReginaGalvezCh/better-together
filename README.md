@@ -2,6 +2,10 @@
 
 Experiencia móvil para orientar y acompañar a fans durante las tres sesiones de BTS en Santiago. Reúne información comprobable, un Pulse curado, actividades y una ayuda cotidiana acotada.
 
+**Estado:** repositorio de código y prototipo de portafolio. Publicar este código no
+despliega el Site ni habilita solicitudes, moderación, fuentes pagadas o automatizaciones.
+Las fechas del evento ya pasaron; no debe usarse como servicio activo de asistencia.
+
 ## MVP
 
 - Navegación independiente para las sesiones del 14, 16 y 17 de octubre de 2026.
@@ -10,10 +14,35 @@ Experiencia móvil para orientar y acompañar a fans durante las tres sesiones d
 - Solicitudes cotidianas aisladas por sesión, con zonas aproximadas.
 - Recepción pendiente de revisión y panel humano protegido para aprobar, rechazar y ocultar.
 - Mapa esquemático sin GPS para elegir un sector y priorizar avisos cercanos.
+- Guía visual independiente con los accesos generales Pedro de Valdivia, Guillermo Mann y Avenida Grecia al Parque Estadio Nacional.
 - Cola local idempotente cuando no hay señal y descarte de solicitudes vencidas.
 - Estados distintos para carga, vacío, error y contenido guardado.
 - Métricas agregadas sin perfiles personales.
 - Interfaz móvil, accesible y preparada para uso con una mano.
+
+## Guía de llegada al Estadio Nacional
+
+En Inicio, la guía permite seleccionar uno de tres accesos generales publicados por el
+[Parque Estadio Nacional](https://parqueestadionacional.cl/como-llegar). La tarjeta de
+detalle y el estado seleccionado cambian juntos. El diagrama es original y esquemático:
+no representa distancias, rutas, puertas ni la posición física de los accesos.
+
+La guía de llegada es distinta del plano de sectores de la entrada. Para los conciertos
+de BTS, [Ticketmaster](https://help.ticketmaster.cl/hc/es-cl/articles/45167383157905-BTS-WORLD-TOUR-ARIRANG)
+indica que las instrucciones de acceso se comunican por los canales oficiales. La
+selección en esta interfaz no asigna una puerta ni valida el ticket. Las tres fechas de
+octubre de 2026 ya pasaron; el repositorio documenta un prototipo de portafolio y no
+ofrece orientación operativa para un evento vigente.
+
+![Guía de accesos generales al Parque Estadio Nacional](./docs/arrival-guide.jpg)
+
+### Criterios verificables
+
+- Al elegir cualquiera de los tres accesos, el botón queda marcado y la tarjeta muestra su nombre y referencia de transporte.
+- Los botones funcionan con teclado y muestran foco visible.
+- La guía conserva enlaces separados a la fuente del Parque y a la información del evento.
+- Ningún acceso se vincula a un sector o puerta de BTS sin fuente específica.
+- El mapa de sectores, la selección local y los avisos existentes siguen separados de la nueva guía.
 
 ## Desarrollo
 
@@ -77,8 +106,8 @@ de activar estas funciones.
 
 Lista de activación: verificar cuenta real → configurar secret y allowlist en Sites
 → aplicar migraciones en publicación controlada → verificar permisos, denuncias,
-429 y limpieza → confirmar cobertura humana. No publicar ni cambiar visibilidad
-solo porque el código se integró a `main`. Las migraciones se prueban localmente;
+429 y limpieza → confirmar cobertura humana. No publicar ni cambiar la visibilidad
+del Site solo porque el código se integró a `main`. Las migraciones se prueban localmente;
 integrarlas no las aplica en producción.
 
 ## Documentación
