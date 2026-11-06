@@ -1,6 +1,6 @@
 # Better Together — public portfolio demo
 
-This is a standalone, read-only React + TypeScript demonstration of two UI interactions from Better Together: the BTS Santiago 2026 sector diagram and the general Parque Estadio Nacional arrival guide. It reuses the source data in `../lib/sectors.ts` and `../lib/arrival-guide.ts`.
+This is a standalone, read-only React + TypeScript demonstration of two UI interactions from Better Together: the BTS Santiago 2026 sector diagram and the general Parque Estadio Nacional arrival guide. The data files in `src/` are snapshots of `../lib/sectors.ts` and `../lib/arrival-guide.ts`, kept with the demo so it can build independently.
 
 The concerts have passed. The demo does not connect to the original app's request, moderation, database, queue, or account features. It never asks for a ticket or precise location and must not be used as live event guidance.
 

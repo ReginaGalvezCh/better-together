@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { sectors, sectorSource, type Zone } from "../../lib/sectors";
-import { eventAccessSource, parkApproaches, parkArrivalSource, type ParkApproachId } from "../../lib/arrival-guide";
+import { sectors, sectorSource, type Zone } from "./sectors";
+import { eventAccessSource, parkApproaches, parkArrivalSource, type ParkApproachId } from "./arrival-guide";
 
 type View = "sectors" | "arrival";
 const guidePdf = "https://info.dgmedios.com/content/uploads/2026/10/GUIA_BTS_WORLD_TOUR_ARIRANG_EN_SANTIAGO.pdf";
